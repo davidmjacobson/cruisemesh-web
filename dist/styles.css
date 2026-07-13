@@ -70,6 +70,14 @@ h1 {
 h2 { margin: 0 0 10px; font-size: 1.2rem; }
 p { color: var(--muted); line-height: 1.65; }
 .lede { max-width: 52ch; margin: 24px 0 30px; font-size: 1.1rem; }
+.eyebrow { margin: 0 0 16px; color: var(--accent); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.feature-icon { margin-bottom: 12px; font-size: 1.55rem; }
+.content-section { margin-top: 38px; padding-top: 30px; border-top: 1px solid var(--line); }
+.content-section p { max-width: 62ch; }
+.content-section a, .legal a { color: var(--accent-dark); font-weight: 650; }
+.delivery-list { display: grid; gap: 14px; margin: 18px 0 0; padding: 0; list-style: none; counter-reset: delivery; }
+.delivery-list li { display: grid; grid-template-columns: minmax(120px, 0.35fr) 1fr; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.delivery-list span { color: var(--muted); line-height: 1.55; }
 
 .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
 .button {
@@ -116,8 +124,21 @@ p { color: var(--muted); line-height: 1.65; }
 footer { padding: 24px 8px; color: var(--muted); font-size: 0.88rem; }
 footer a { color: inherit; }
 
+.legal-page { width: min(860px, calc(100% - 32px)); }
+.legal h1 { max-width: none; margin-bottom: 24px; font-size: clamp(2.4rem, 7vw, 4.4rem); }
+.legal h2 { margin: 40px 0 12px; padding-top: 8px; font-size: 1.35rem; }
+.legal p, .legal li { color: var(--muted); line-height: 1.72; }
+.legal li { margin: 8px 0; }
+.legal code { padding: 0.1em 0.35em; border-radius: 6px; background: rgba(18, 33, 29, 0.06); font-size: 0.9em; }
+.legal .summary { margin: 28px 0; padding: 20px; border-left: 4px solid var(--accent); border-radius: 0 14px 14px 0; background: rgba(8, 127, 104, 0.07); }
+
+@media (max-width: 560px) {
+  .delivery-list li { grid-template-columns: 1fr; gap: 4px; }
+  .legal ul { padding-left: 20px; }
+}
+
 @media (prefers-color-scheme: dark) {
   :root { --ink: #ecf8f3; --muted: #aac0b8; --paper: #071410; --card: rgba(13, 31, 25, 0.88); --line: rgba(236, 248, 243, 0.12); }
   .button.secondary, .token { background: rgba(236, 248, 243, 0.08); }
+  .legal code { background: rgba(236, 248, 243, 0.08); }
 }
-

@@ -1,6 +1,136 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Privacy — CruiseMesh</title><link rel="stylesheet" href="/styles.css"></head>
-<body><main><a class="brand" href="/"><span class="mark">CM</span> CruiseMesh</a><section class="card"><h1>Privacy</h1><p class="lede">This website uses no analytics, advertising, cookies, accounts, or server-side friend-card processing.</p><p>Friend-card data is placed in the URL fragment after <code>#</code>. Browsers do not send URL fragments in HTTP requests, so the friend card is not transmitted to this site or Cloudflare. The page reads it locally only to provide a copy fallback.</p><p>The CruiseMesh app stores identity, contacts, and messages on your device. Relay servers carry sealed encrypted envelopes and cannot read message contents.</p></section><footer><a href="/">Home</a> · <a href="/support/">Support</a></footer></main></body>
-</html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="CruiseMesh privacy policy for the mobile apps, optional relay, and website.">
+  <title>Privacy Policy — CruiseMesh</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="legal-page">
+    <a class="brand" href="/"><span class="mark">CM</span> CruiseMesh</a>
+    <article class="card legal">
+      <p class="eyebrow">Legal</p>
+      <h1>Privacy Policy</h1>
+      <p><strong>Effective date:</strong> July 12, 2026<br><strong>Applies to:</strong> the CruiseMesh mobile apps, the optional internet relay at <code>relay.davidjacobson.work</code>, and this website (<code>cruisemesh.app</code>).</p>
+      <p class="summary"><strong>Short version:</strong> CruiseMesh is offline-first family messaging. Message contents are end-to-end encrypted on your devices. We do not run accounts, advertising, or analytics SDKs. The optional relay stores only sealed ciphertext and routing hints for a limited time. This website is static, with no cookies or trackers.</p>
 
+      <h2>1. Who operates CruiseMesh</h2>
+      <p>CruiseMesh is an open-source project operated by David Jacobson (“we,” “us”). Source code is published at <a href="https://github.com/davidmjacobson/cruisemesh">github.com/davidmjacobson/cruisemesh</a>. You may also self-host the relay; if you do, <em>you</em> are the operator of that instance, and this policy describes the design of the software rather than every third-party host’s practices.</p>
+
+      <h2>2. Scope of this policy</h2>
+      <p>This policy covers three surfaces:</p>
+      <ul>
+        <li><strong>Mobile apps</strong> for Android and iOS that store data on your device and optionally sync over Bluetooth or the internet relay.</li>
+        <li><strong>Internet relay</strong> (<code>cruisemesh-relayd</code>), a mailbox that holds sealed envelopes until devices fetch and acknowledge them.</li>
+        <li><strong>This website</strong>, a static landing page and friend-link fallback. It requires no account and sets no analytics or advertising cookies.</li>
+      </ul>
+
+      <h2>3. What we do not collect</h2>
+      <p>Based on the current software:</p>
+      <ul>
+        <li>No email address, phone number, or password account is required to use the app.</li>
+        <li>No advertising identifiers, crash-reporting SDKs such as Firebase or Sentry, or product-analytics SDKs are bundled in the apps.</li>
+        <li>The Android app requests Bluetooth with <code>neverForLocation</code> and does not request location permission for scanning.</li>
+        <li>The relay cannot open sealed message bodies. It does not store plaintext messages, read/delivery receipt contents, or sender identity in the public envelope header.</li>
+        <li>This website uses no third-party scripts, analytics, or tracking cookies.</li>
+      </ul>
+
+      <h2>4. Data on your device</h2>
+      <p>CruiseMesh is designed so cryptographic identity and conversation data live primarily on your phone:</p>
+      <ul>
+        <li><strong>Identity keys.</strong> Ed25519 signing and X25519 encryption keypairs are generated on device. Android protects the installed identity with hardware-backed Keystore encryption where available.</li>
+        <li><strong>Manual encrypted backups.</strong> If you explicitly create an account backup, CruiseMesh exports identity keys, local message data, profile information, and relay configuration into a passphrase-encrypted file you choose where to save. That file can restore the same identity after reinstalling. Anyone with both the file and its passphrase can impersonate the identity and read its included history, so protect it accordingly.</li>
+        <li><strong>User ID.</strong> A short ID derived from your public signing key and displayed for friending. It is not a government identifier or phone number.</li>
+        <li><strong>Profile.</strong> A display name you choose and an optional profile photo used as contact metadata.</li>
+        <li><strong>Contacts and groups.</strong> Friend cards, public keys, optional relay URL/token, group membership, and group keys.</li>
+        <li><strong>Messages and media.</strong> Chat history, delivery/read state, and photos or voice memos—stored locally and sealed before leaving the device.</li>
+        <li><strong>Relay configuration.</strong> If you use an internet relay, the app stores its URL and family bearer token.</li>
+      </ul>
+      <p>Deleting the app or clearing app data removes on-device data subject to your operating system. CruiseMesh app data is not included in Android Auto Backup. iOS device backups, if enabled, may include app data under Apple’s backup rules. Files you manually exported remain wherever you saved them.</p>
+
+      <h2>5. Permissions the apps request</h2>
+      <ul>
+        <li><strong>Bluetooth</strong> — discover nearby CruiseMesh peers and exchange sealed mesh traffic without internet.</li>
+        <li><strong>Camera</strong> — scan friend QR codes and take photos for chat or profile use.</li>
+        <li><strong>Microphone</strong> — record short voice memos when you use that feature.</li>
+        <li><strong>Photo library</strong> — choose an existing photo to send or use as a profile image.</li>
+        <li><strong>Internet and network state</strong> — optionally flush sealed envelopes to the relay when a network path exists.</li>
+        <li><strong>Notifications</strong> — alert you about new messages and friend connections when the OS allows.</li>
+        <li><strong>Foreground service and battery exemptions</strong> on Android — keep mesh sync more reliable in the background; declining reduces background reliability.</li>
+      </ul>
+      <p>Permissions are used for these features, not advertising or cross-app tracking.</p>
+
+      <h2>6. Data other devices may process</h2>
+      <p>CruiseMesh uses delay-tolerant networking:</p>
+      <ul>
+        <li><strong>Direct Bluetooth.</strong> Your phone exchanges sealed envelopes with a peer in range. A brief unauthenticated hello announces your User ID so a peer can map the link to a known contact for routing and UI.</li>
+        <li><strong>Data mule.</strong> Another CruiseMesh device may temporarily store and carry sealed envelopes it cannot read until they reach the recipient or expire.</li>
+        <li><strong>Internet relay.</strong> A device with your family’s relay configuration and network access can upload or download sealed envelopes for matching recipient hints.</li>
+        <li><strong>Broadcast mode.</strong> Traffic on a public broadcast channel is intentionally readable by any CruiseMesh app. Treat it as public rather than private messaging.</li>
+      </ul>
+      <p>Nearby Bluetooth observers may learn that CruiseMesh devices are present and may see transient User IDs or public envelope headers such as message ID, hop limit, expiry, rotating recipient hint, and ciphertext. They cannot open sealed family traffic without recipient keys.</p>
+
+      <h2>7. Internet relay mailbox</h2>
+      <p>The hosted relay at <code>relay.davidjacobson.work</code> is a content-agnostic mailbox. Authenticated clients using a shared family bearer token may post and fetch envelopes. Stored fields are essentially:</p>
+      <ul>
+        <li><code>msg_id</code>, an opaque deduplication identifier</li>
+        <li><code>hop_ttl</code> and <code>expiry_ms</code></li>
+        <li><code>recipient_hint</code>, a short hash of recipient identity salted by calendar day</li>
+        <li><code>sealed</code>, containing ciphertext only</li>
+        <li>server creation time and family-token scope for access control</li>
+      </ul>
+      <p>Sender identity and plaintext—including receipt details—are inside the seal. A compromised or curious relay can observe timing, volume, and approximate social-graph size for a family token, but not message content or read state.</p>
+      <p><strong>Retention:</strong> clients typically set expiry around seven days. The server enforces a hard ceiling of 30 days from creation. Rows are removed when acknowledged or when expiry/retention pruning runs.</p>
+      <p>Anyone holding a family bearer token can use that family’s mailbox. Protect QR codes and tokens like a household shared secret.</p>
+
+      <h2>8. Website and infrastructure logs</h2>
+      <ul>
+        <li><strong>This website</strong> is served through Cloudflare Workers Static Assets and does not set first-party analytics cookies or embed third-party trackers.</li>
+        <li><strong>Friend links</strong> place the friend card after <code>#</code> in the URL. URL fragments are processed locally by the browser and are not included in HTTP requests to Cloudflare or this website.</li>
+        <li><strong>Cloudflare and relay infrastructure</strong> may process standard connection metadata such as IP address, timestamp, URL path, user agent, and response status for security, delivery, and operations under their respective terms.</li>
+        <li>Family tokens should be sent in the <code>Authorization</code> header. Putting tokens in query strings can expose them to infrastructure logs.</li>
+      </ul>
+
+      <h2>9. How data is used</h2>
+      <ul>
+        <li>To deliver messages and receipts between people you deliberately friend or group with.</li>
+        <li>To operate the optional relay and keep it secure and available.</li>
+        <li>Not for advertising, selling personal data, or building marketing profiles.</li>
+      </ul>
+
+      <h2>10. Sharing</h2>
+      <p>We do not sell personal data. Message contents leave your device only as sealed ciphertext to mesh peers or a relay you configure. Infrastructure providers and certificate authorities may process connection metadata under their terms. Open-source distribution through GitHub is separate from app message data.</p>
+      <p>We may disclose information if required by law or necessary to protect rights, safety, or the relay from abuse—keeping in mind that the hosted relay holds sealed blobs rather than plaintext.</p>
+
+      <h2>11. Your choices and controls</h2>
+      <ul>
+        <li>Do not configure a relay if you want Bluetooth-only delivery.</li>
+        <li>Rotate or revoke family relay tokens if one is exposed.</li>
+        <li>Delete contacts or groups on device; remove the app to delete local data subject to OS backups.</li>
+        <li>Create manual encrypted backups only when wanted, store them somewhere trustworthy, and use a strong passphrase.</li>
+        <li>Verify contacts using the short fingerprint phrase shown during friending.</li>
+        <li>Treat broadcast channels as public.</li>
+      </ul>
+      <p>Because there are no cloud accounts, there is no central “download my data” portal. Authoritative chat copies live on participating devices. Relay contents are sealed and time-limited.</p>
+
+      <h2>12. Children</h2>
+      <p>CruiseMesh is intended for family use. It is not directed to children under 13 as a general-audience product, and we do not knowingly collect children’s personal information through accounts because CruiseMesh does not offer accounts. Parents and guardians who install the app for family messaging control devices and friending choices.</p>
+
+      <h2>13. International and self-hosted use</h2>
+      <p>The hosted relay and website use infrastructure under our control and third-party service providers. If you configure another relay URL, that operator’s privacy and logging practices apply to envelopes sent there.</p>
+
+      <h2>14. Security</h2>
+      <p>We use end-to-end sealing as implemented in the open-source core, HTTPS for relay transport, and minimize what the relay can see. No transmission or storage method is perfectly secure. The current threat model prioritizes unreliable connectivity and untrusted carriers of ciphertext, not nation-state anonymity. See <a href="https://github.com/davidmjacobson/cruisemesh/blob/master/DESIGN.md">DESIGN.md</a> for technical detail.</p>
+
+      <h2>15. Changes</h2>
+      <p>We may update this policy as the software evolves—for example, if store distribution, multi-device sync, or optional telemetry is added. The effective date will change, and material changes should be reflected here and, when practical, in release notes.</p>
+
+      <h2>16. Contact</h2>
+      <p>For privacy questions or questions about the hosted relay, open an issue in the <a href="https://github.com/davidmjacobson/cruisemesh">CruiseMesh GitHub repository</a>.</p>
+    </article>
+    <footer><a href="/">← Back to CruiseMesh</a><br><a href="https://github.com/davidmjacobson/cruisemesh">Source</a> · <a href="/privacy/">Privacy</a></footer>
+  </main>
+</body>
+</html>

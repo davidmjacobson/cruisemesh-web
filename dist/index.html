@@ -3,23 +3,48 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="CruiseMesh keeps friends and family connected nearby, even without internet access.">
-  <title>CruiseMesh — messaging beyond the internet</title>
+  <meta name="description" content="Offline-first, end-to-end encrypted family messaging over a delay-tolerant Bluetooth mesh with an optional internet relay.">
+  <meta property="og:title" content="CruiseMesh — offline-first family messaging">
+  <meta property="og:description" content="Text your family on a cruise ship—or anywhere coverage is unreliable—over Bluetooth mesh.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://cruisemesh.app/">
+  <title>CruiseMesh — offline-first family messaging</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <main>
     <a class="brand" href="/"><span class="mark">CM</span> CruiseMesh</a>
     <section class="card">
-      <h1>Messaging beyond the internet.</h1>
-      <p class="lede">CruiseMesh helps friends and family exchange messages nearby over a private Bluetooth mesh, with an optional internet relay when one is available.</p>
-      <div class="details">
-        <div class="detail"><h2>Nearby first</h2><p>Phones connect directly and can carry messages for one another.</p></div>
-        <div class="detail"><h2>Private by design</h2><p>Friend cards and messages use end-to-end cryptographic identities.</p></div>
-        <div class="detail"><h2>Built for gaps</h2><p>Messages wait safely when nobody has a connection and resume later.</p></div>
+      <p class="eyebrow">Family messaging · offline-first</p>
+      <h1>Text your family beyond the internet.</h1>
+      <p class="lede">Text your family on a cruise ship—or anywhere coverage is unreliable—over a delay-tolerant Bluetooth mesh, with end-to-end encryption and an optional internet relay when someone gets online.</p>
+      <div class="actions">
+        <a class="button" href="https://github.com/davidmjacobson/cruisemesh">View on GitHub</a>
+        <a class="button secondary" href="https://github.com/davidmjacobson/cruisemesh/blob/master/DESIGN.md">Read the design</a>
       </div>
+
+      <div class="details">
+        <div class="detail"><div class="feature-icon" aria-hidden="true">📡</div><h2>Phone-to-phone mesh</h2><p>BLE store-and-forward carries messages when Wi‑Fi and cellular are gone. Minutes of delay are fine.</p></div>
+        <div class="detail"><div class="feature-icon" aria-hidden="true">🔒</div><h2>End-to-end encrypted</h2><p>Sealed envelopes only. Relays and strangers’ phones never see plaintext—including delivery receipts.</p></div>
+        <div class="detail"><div class="feature-icon" aria-hidden="true">🌐</div><h2>Optional internet relay</h2><p>One device with a Wi‑Fi package becomes the family uplink. The mailbox is self-hostable on a cheap VPS.</p></div>
+      </div>
+
+      <section class="content-section">
+        <h2>How delivery works</h2>
+        <ol class="delivery-list">
+          <li><strong>Direct contact</strong><span>Within Bluetooth range of the recipient.</span></li>
+          <li><strong>Data mule</strong><span>A family member’s phone picks up your queued message and carries it until paths cross.</span></li>
+          <li><strong>Internet relay</strong><span>Any phone with network access syncs the family’s sealed queue through the relay.</span></li>
+        </ol>
+      </section>
+
+      <section class="content-section">
+        <h2>Apps</h2>
+        <p>Android (Kotlin / Jetpack Compose) and iOS (SwiftUI) clients live in the <a href="https://github.com/davidmjacobson/cruisemesh">open-source repository</a>. Shared cryptography and sync logic use a Rust core through UniFFI.</p>
+        <p><strong>Early development:</strong> store listings are not public yet. Build from source for now.</p>
+      </section>
     </section>
-    <footer><a href="/privacy/">Privacy</a> · <a href="/support/">Support</a></footer>
+    <footer>CruiseMesh · offline-first family messaging<br><a href="https://github.com/davidmjacobson/cruisemesh">Source</a> · <a href="https://github.com/davidmjacobson/cruisemesh/blob/master/README.md">README</a> · <a href="/privacy/">Privacy</a> · <a href="/support/">Support</a></footer>
   </main>
 </body>
 </html>
