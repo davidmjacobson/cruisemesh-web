@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Open a CruiseMesh friend card</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main>
+    <a class="brand" href="/"><span class="mark">CM</span> CruiseMesh</a>
+    <section class="card">
+      <h1>Someone wants to connect.</h1>
+      <p class="lede" id="intro">This friend card should open directly in CruiseMesh when the app is installed.</p>
+      <div id="card-controls" hidden>
+        <div class="token" id="token" aria-label="CruiseMesh friend card"></div>
+        <div class="actions">
+          <button class="button" id="copy" type="button">Copy friend card</button>
+          <a class="button secondary" href="/support/">Get help</a>
+        </div>
+        <div class="notice" id="notice" role="status" aria-live="polite"></div>
+      </div>
+      <div class="details">
+        <div class="detail"><h2>App installed?</h2><p>Open CruiseMesh, choose Add a friend, then paste this card if it did not open automatically.</p></div>
+        <div class="detail"><h2>Verify in person</h2><p>Compare the four fingerprint words shown on both phones before messaging.</p></div>
+      </div>
+    </section>
+    <footer>The friend card stays after the <code>#</code> in this URL. It is not sent to this website or stored by Cloudflare.</footer>
+  </main>
+  <script>
+    (() => {
+      const raw = location.hash.slice(1);
+      const match = raw.match(/CMFRIEND1:[A-Za-z0-9_-]+/);
+      if (!match) {
+        document.querySelector("#intro").textContent = "This link does not contain a complete CruiseMesh friend card. Ask your friend to share it again.";
+        return;
+      }
+      const token = match[0];
+      document.querySelector("#token").textContent = token;
+      document.querySelector("#card-controls").hidden = false;
+      document.querySelector("#copy").addEventListener("click", async () => {
+        const notice = document.querySelector("#notice");
+        try {
+          await navigator.clipboard.writeText(token);
+          notice.textContent = "Friend card copied. Paste it into CruiseMesh.";
+        } catch {
+          const selection = getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(document.querySelector("#token"));
+          selection.removeAllRanges();
+          selection.addRange(range);
+          notice.textContent = "Select and copy the highlighted friend card.";
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
+

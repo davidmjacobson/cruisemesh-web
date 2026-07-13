@@ -1,0 +1,21 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": ["DDS64SNDZH.com.cruisemesh.app"],
+        "components": [
+          {
+            "/": "/f",
+            "comment": "Open CruiseMesh friend-card links in the app"
+          },
+          {
+            "/": "/f/",
+            "comment": "Open the trailing-slash friend-card fallback in the app"
+          }
+        ]
+      }
+    ]
+  }
+}
+
