@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cruisemesh-redirect",
+  "main": "./src/redirect.js",
+  "compatibility_date": "2026-07-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    {
+      "pattern": "cruisemesh.com",
+      "custom_domain": true
+    }
+  ]
+}

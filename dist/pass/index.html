@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Cruise Pass: a hosted CruiseMesh internet relay for your whole family. One payment, 30 days, no subscription.">
+  <meta property="og:title" content="Cruise Pass — hosted CruiseMesh relay">
+  <meta property="og:description" content="One pass covers the family. Pay once, get your relay link instantly.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://cruisemesh.app/pass/">
+  <title>Cruise Pass — hosted CruiseMesh relay</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main>
+    <a class="brand" href="/"><span class="mark">CM</span> CruiseMesh</a>
+    <section class="card">
+      <p class="eyebrow">Hosted relay · Cruise Pass</p>
+      <h1>One pass, whole family.</h1>
+      <p class="lede">A hosted internet relay for your family's sealed messages. Pay once, get your relay link instantly, and any family member who gets online syncs everyone's messages.</p>
+      <p class="price">$9.99 <span>· 30 days · one payment, no subscription</span></p>
+      <div class="actions">
+        <button class="button" id="buy" type="button">Get your relay — $9.99</button>
+        <a class="button secondary" href="/#relay">What's a relay?</a>
+      </div>
+      <div class="notice" id="notice" role="status" aria-live="polite"></div>
+
+      <div class="details">
+        <div class="detail"><div class="feature-icon" aria-hidden="true">⚡</div><h2>Instant setup</h2><p>Your relay URL and key appear right after payment and arrive by email. One tap configures the app.</p></div>
+        <div class="detail"><div class="feature-icon" aria-hidden="true">👨‍👩‍👧‍👦</div><h2>Family-wide</h2><p>One pass covers everyone. The relay spreads to your family automatically through friend cards.</p></div>
+        <div class="detail"><div class="feature-icon" aria-hidden="true">🔒</div><h2>Private by design</h2><p>The relay stores only sealed ciphertext for up to 30 days. It can never read your messages.</p></div>
+      </div>
+
+      <section class="content-section">
+        <h2>How it works</h2>
+        <ol class="delivery-list">
+          <li><strong>Pay with card</strong><span>Checkout is handled by Stripe. We never see your card details.</span></li>
+          <li><strong>Get your relay</strong><span>Your relay URL and family key appear on screen and in your email.</span></li>
+          <li><strong>Tap to set up</strong><span>Open the setup link on a phone with CruiseMesh installed.</span></li>
+          <li><strong>Share friend cards</strong><span>Friending family members passes the relay along automatically.</span></li>
+        </ol>
+      </section>
+
+      <section class="content-section">
+        <h2>Prefer to self-host?</h2>
+        <p>CruiseMesh stays open source and self-hostable. The same relay runs on any cheap VPS — see the <a href="https://github.com/davidmjacobson/cruisemesh/blob/master/relayd/DEPLOY.md">deployment guide</a>. Cruise Pass is for families who would rather skip the server admin.</p>
+      </section>
+    </section>
+    <footer>CruiseMesh · offline-first family messaging<br><a href="/">Home</a> · <a href="/privacy/">Privacy</a> · <a href="/support/">Support</a></footer>
+  </main>
+  <script>
+    (() => {
+      const notice = document.querySelector("#notice");
+      const buy = document.querySelector("#buy");
+      if (new URLSearchParams(location.search).has("canceled")) {
+        notice.textContent = "Checkout canceled — you were not charged.";
+      }
+      buy.addEventListener("click", async () => {
+        buy.disabled = true;
+        notice.textContent = "Starting secure checkout…";
+        try {
+          const response = await fetch("/api/checkout", { method: "POST" });
+          const body = await response.json();
+          if (!response.ok || !body.url) throw new Error("checkout unavailable");
+          location.href = body.url;
+        } catch {
+          buy.disabled = false;
+          notice.textContent = "Could not start checkout. Please try again in a moment, or contact support.";
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

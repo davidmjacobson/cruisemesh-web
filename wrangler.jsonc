@@ -1,12 +1,43 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "cruisemesh-web",
+  "main": "src/index.js",
   "compatibility_date": "2026-07-12",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page"
   },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    // Stripe Price id for the Cruise Pass one-time payment (test mode).
+    // Swap for the live-mode price id when going live.
+    "STRIPE_PRICE_ID": "price_1TvS7y0JgNc7Eg1GDzG9KiDc",
+    // Public base URL of the hosted relay that new passes are provisioned on.
+    "RELAY_URL": "https://relay.cruisemesh.app",
+    // Where the relayd admin API is reachable (usually the same host).
+    "RELAY_ADMIN_ORIGIN": "https://relay.cruisemesh.app",
+    // From-address for credential emails. The domain must be onboarded to
+    // Cloudflare Email Sending first (see README).
+    "EMAIL_FROM": "pass@cruisemesh.app"
+  },
+  // Secrets (set with `npx wrangler secret put <NAME>`):
+  //   STRIPE_SECRET_KEY     - Stripe API secret key
+  //   STRIPE_WEBHOOK_SECRET - signing secret of the Stripe webhook endpoint
+  //   RELAY_ADMIN_TOKEN     - bearer token for the relayd admin API
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cruisemesh-web",
+      "database_id": "a480903a-2d92-4486-bc0e-11f8f689eb9c"
+    }
+  ],
+  // Uncomment after running: npx wrangler email sending enable cruisemesh.app
+  // Until then the Worker skips credential emails (success page still works).
+  // "send_email": [{ "name": "EMAIL" }],
   "routes": [
     {
       "pattern": "cruisemesh.app",
@@ -14,4 +45,3 @@
     }
   ]
 }
-

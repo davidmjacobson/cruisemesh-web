@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Set up a CruiseMesh relay</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main>
+    <a class="brand" href="/"><span class="mark">CM</span> CruiseMesh</a>
+    <section class="card">
+      <h1>Relay setup.</h1>
+      <p class="lede" id="intro">This relay link should open directly in CruiseMesh when the app is installed.</p>
+      <div id="card-controls" hidden>
+        <div class="token" id="token" aria-label="CruiseMesh relay setup card"></div>
+        <div class="actions">
+          <button class="button" id="copy" type="button">Copy relay card</button>
+          <a class="button secondary" href="/support/">Get help</a>
+        </div>
+        <div class="notice" id="notice" role="status" aria-live="polite"></div>
+      </div>
+      <div class="details">
+        <div class="detail"><h2>App installed?</h2><p>Open CruiseMesh, go to Settings → Internet relay, then paste this card if it did not open automatically.</p></div>
+        <div class="detail"><h2>Keep it private</h2><p>Anyone with this card can use your family's relay mailbox. Share it only with family.</p></div>
+      </div>
+    </section>
+    <footer>The relay card stays after the <code>#</code> in this URL. It is not sent to this website or stored by Cloudflare.</footer>
+  </main>
+  <script>
+    (() => {
+      const raw = location.hash.slice(1);
+      const match = raw.match(/CMRELAY1:[A-Za-z0-9_-]+/);
+      if (!match) {
+        document.querySelector("#intro").textContent = "This link does not contain a complete CruiseMesh relay card. Check your purchase email for the full setup link.";
+        return;
+      }
+      const token = match[0];
+      document.querySelector("#token").textContent = token;
+      document.querySelector("#card-controls").hidden = false;
+      document.querySelector("#copy").addEventListener("click", async () => {
+        const notice = document.querySelector("#notice");
+        try {
+          await navigator.clipboard.writeText(token);
+          notice.textContent = "Relay card copied. Paste it into CruiseMesh.";
+        } catch {
+          const selection = getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(document.querySelector("#token"));
+          selection.removeAllRanges();
+          selection.addRange(range);
+          notice.textContent = "Select and copy the highlighted relay card.";
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
