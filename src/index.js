@@ -22,11 +22,18 @@ function page(title, body) {
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <main>
-    <a class="brand" href="/"><span class="mark">CM</span> CruiseMesh</a>
-    <section class="card">${body}</section>
-    <footer><a href="/">← Back to CruiseMesh</a> · <a href="/support/">Support</a></footer>
+  <header class="site-header">
+    <div class="shell">
+      <a class="brand" href="/">CruiseMesh</a>
+      <nav><a href="/support/">Support</a></nav>
+    </div>
+  </header>
+  <main class="shell">
+    <div class="intro">${body}</div>
   </main>
+  <footer class="site-footer">
+    <div class="shell"><a href="/">Home</a> · <a href="/support/">Support</a></div>
+  </footer>
 </body>
 </html>`,
     { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
@@ -101,7 +108,8 @@ async function handleSuccess(request, env) {
      <h2 style="margin-top:20px">Relay token</h2>
      <div class="token">${escapeHtml(purchase.family_token)}</div>
      ${emailedNote}
-     <p>Pass active until <strong>${escapeHtml(new Date(purchase.expires_ms).toUTCString())}</strong>. Treat the token like a household shared secret.</p>`,
+     <p>Pass active until <strong>${escapeHtml(new Date(purchase.expires_ms).toUTCString())}</strong>. Treat the token like a household shared secret.</p>
+     <p>If Cruise Pass doesn't work out on your sailing, refunds are no questions asked — see <a href="/support/">support</a>.</p>`,
   );
 }
 

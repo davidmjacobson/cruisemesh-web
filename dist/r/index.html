@@ -8,10 +8,15 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <main>
-    <a class="brand" href="/"><span class="mark">CM</span> CruiseMesh</a>
-    <section class="card">
-      <h1>Relay setup.</h1>
+  <header class="site-header">
+    <div class="shell">
+      <a class="brand" href="/">CruiseMesh</a>
+      <nav><a href="/support/">Support</a></nav>
+    </div>
+  </header>
+  <main class="shell">
+    <div class="intro">
+      <h1>Relay setup</h1>
       <p class="lede" id="intro">This relay link should open directly in CruiseMesh when the app is installed.</p>
       <div id="card-controls" hidden>
         <div class="token" id="token" aria-label="CruiseMesh relay setup card"></div>
@@ -21,13 +26,21 @@
         </div>
         <div class="notice" id="notice" role="status" aria-live="polite"></div>
       </div>
-      <div class="details">
-        <div class="detail"><h2>App installed?</h2><p>Open CruiseMesh, go to Settings → Internet relay, then paste this card if it did not open automatically.</p></div>
-        <div class="detail"><h2>Keep it private</h2><p>Anyone with this card can use your family's relay mailbox. Share it only with family.</p></div>
-      </div>
+    </div>
+
+    <section>
+      <h2>App installed but nothing happened?</h2>
+      <p>Open CruiseMesh, go to <strong>Settings → Internet relay</strong>, and paste the relay card above.</p>
     </section>
-    <footer>The relay card stays after the <code>#</code> in this URL. It is not sent to this website or stored by Cloudflare.</footer>
+
+    <section>
+      <h2>Keep it private</h2>
+      <p>Anyone with this card can use your family's relay mailbox. Share it only with family.</p>
+    </section>
   </main>
+  <footer class="site-footer">
+    <div class="shell">The relay card stays after the <code>#</code> in this URL. It is not sent to this website or stored by Cloudflare.</div>
+  </footer>
   <script>
     (() => {
       const raw = location.hash.slice(1);

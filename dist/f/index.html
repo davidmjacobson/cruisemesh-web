@@ -8,10 +8,15 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <main>
-    <a class="brand" href="/"><span class="mark">CM</span> CruiseMesh</a>
-    <section class="card">
-      <h1>Someone wants to connect.</h1>
+  <header class="site-header">
+    <div class="shell">
+      <a class="brand" href="/">CruiseMesh</a>
+      <nav><a href="/support/">Support</a></nav>
+    </div>
+  </header>
+  <main class="shell">
+    <div class="intro">
+      <h1>Someone wants to connect</h1>
       <p class="lede" id="intro">This friend card should open directly in CruiseMesh when the app is installed.</p>
       <div id="card-controls" hidden>
         <div class="token" id="token" aria-label="CruiseMesh friend card"></div>
@@ -21,13 +26,21 @@
         </div>
         <div class="notice" id="notice" role="status" aria-live="polite"></div>
       </div>
-      <div class="details">
-        <div class="detail"><h2>App installed?</h2><p>Open CruiseMesh, choose Add a friend, then paste this card if it did not open automatically.</p></div>
-        <div class="detail"><h2>Verify in person</h2><p>Compare the four fingerprint words shown on both phones before messaging.</p></div>
-      </div>
+    </div>
+
+    <section>
+      <h2>App installed but nothing happened?</h2>
+      <p>Open CruiseMesh, choose <strong>Add a friend</strong>, and paste the friend card above.</p>
     </section>
-    <footer>The friend card stays after the <code>#</code> in this URL. It is not sent to this website or stored by Cloudflare.</footer>
+
+    <section>
+      <h2>Verify in person</h2>
+      <p>Compare the four fingerprint words shown on both phones before messaging.</p>
+    </section>
   </main>
+  <footer class="site-footer">
+    <div class="shell">The friend card stays after the <code>#</code> in this URL. It is not sent to this website or stored by Cloudflare.</div>
+  </footer>
   <script>
     (() => {
       const raw = location.hash.slice(1);
@@ -57,4 +70,3 @@
   </script>
 </body>
 </html>
-

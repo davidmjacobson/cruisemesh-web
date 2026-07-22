@@ -3,49 +3,71 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Offline-first, end-to-end encrypted family messaging over a delay-tolerant Bluetooth mesh with an optional internet relay.">
+  <meta name="description" content="CruiseMesh sends end-to-end encrypted messages between phones over ship Wi-Fi and Bluetooth — no internet package needed. For cruise ships and anywhere coverage is unreliable.">
   <meta property="og:title" content="CruiseMesh — offline-first family messaging">
-  <meta property="og:description" content="Text your family on a cruise ship—or anywhere coverage is unreliable—over Bluetooth mesh.">
+  <meta property="og:description" content="End-to-end encrypted messaging over ship Wi-Fi and Bluetooth, with an optional internet relay to reach family at home. No accounts, no tracking.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://cruisemesh.app/">
   <title>CruiseMesh — offline-first family messaging</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <main>
-    <a class="brand" href="/"><span class="mark">CM</span> CruiseMesh</a>
-    <section class="card">
-      <p class="eyebrow">Family messaging · offline-first</p>
-      <h1>Text your family beyond the internet.</h1>
-      <p class="lede">Text your family on a cruise ship—or anywhere coverage is unreliable—over a delay-tolerant Bluetooth mesh, with end-to-end encryption and an optional internet relay when someone gets online.</p>
+  <header class="site-header">
+    <div class="shell">
+      <a class="brand" href="/">CruiseMesh</a>
+      <nav>
+        <a href="/pass/">Cruise Pass</a>
+        <a href="https://github.com/davidmjacobson/cruisemesh">GitHub</a>
+        <a href="/support/">Support</a>
+      </nav>
+    </div>
+  </header>
+  <main class="shell">
+    <div class="intro">
+      <p class="eyebrow">Offline-first family messaging</p>
+      <h1>Text your family when there's no signal.</h1>
+      <p class="lede">CruiseMesh carries end-to-end encrypted messages between phones over the ship's Wi-Fi and Bluetooth — no internet package needed. It's built for cruise ships and anywhere coverage is unreliable — no accounts, no phone numbers, no tracking.</p>
       <div class="actions">
         <a class="button" href="https://github.com/davidmjacobson/cruisemesh">View on GitHub</a>
         <a class="button secondary" href="https://github.com/davidmjacobson/cruisemesh/blob/master/DESIGN.md">Read the design</a>
       </div>
+    </div>
 
-      <div class="details">
-        <div class="detail"><div class="feature-icon" aria-hidden="true">📡</div><h2>Phone-to-phone mesh</h2><p>BLE store-and-forward carries messages when Wi‑Fi and cellular are gone. Minutes of delay are fine.</p></div>
-        <div class="detail"><div class="feature-icon" aria-hidden="true">🔒</div><h2>End-to-end encrypted</h2><p>Sealed envelopes only. Relays and strangers’ phones never see plaintext—including delivery receipts.</p></div>
-        <div class="detail" id="relay"><div class="feature-icon" aria-hidden="true">🌐</div><h2>Optional internet relay</h2><p>One device with a Wi‑Fi package becomes the family uplink. The mailbox is self-hostable on a cheap VPS.</p><p class="more"><a href="/pass/">Get a hosted relay →</a></p></div>
-      </div>
-
-      <section class="content-section">
-        <h2>How delivery works</h2>
-        <ol class="delivery-list">
-          <li><strong>Direct contact</strong><span>Within Bluetooth range of the recipient.</span></li>
-          <li><strong>Data mule</strong><span>A family member’s phone picks up your queued message and carries it until paths cross.</span></li>
-          <li><strong>Internet relay</strong><span>Any phone with network access syncs the family’s sealed queue through the relay.</span></li>
-        </ol>
-      </section>
-
-      <section class="content-section">
-        <h2>Apps</h2>
-        <p>Android (Kotlin / Jetpack Compose) and iOS (SwiftUI) clients live in the <a href="https://github.com/davidmjacobson/cruisemesh">open-source repository</a>. Shared cryptography and sync logic use a Rust core through UniFFI.</p>
-        <p><strong>Early development:</strong> store listings are not public yet. Build from source for now.</p>
-      </section>
+    <section>
+      <h2>How messages get through</h2>
+      <p>Messages are sealed on your phone and delivered by whichever route exists. Minutes of delay are expected and fine.</p>
+      <ol class="rows">
+        <li><strong>Ship Wi-Fi</strong><span>Phones on the same ship network find each other and deliver instantly, across the whole ship — no internet package needed. Some ships block phone-to-phone traffic; the app checks and tells you.</span></li>
+        <li><strong>Direct contact</strong><span>Phones within Bluetooth range exchange messages immediately.</span></li>
+        <li><strong>Data mule</strong><span>A family member's phone carries your sealed message until paths cross with the recipient.</span></li>
+        <li><strong>Internet relay</strong><span>When any phone gets online, it syncs the family's sealed messages through a relay server.</span></li>
+      </ol>
     </section>
-    <footer>CruiseMesh · offline-first family messaging<br><a href="https://github.com/davidmjacobson/cruisemesh">Source</a> · <a href="https://github.com/davidmjacobson/cruisemesh/blob/master/README.md">README</a> · <a href="/pass/">Cruise Pass</a> · <a href="/privacy/">Privacy</a> · <a href="/support/">Support</a></footer>
+
+    <section id="relay">
+      <h2>The internet relay</h2>
+      <p>The relay is a mailbox for your family's encrypted messages, and it's how one internet purchase covers everyone: when any single family phone gets online — one Wi-Fi package, a port-day café — it carries the whole family's messages to the relay and back, including to family at home who aren't on the cruise at all.</p>
+      <p>It stores sealed envelopes only — it can't read message contents, sender identities, or receipts — and deletes them after delivery or 30 days.</p>
+      <p>Run your own on any small VPS, or get a hosted one with <a href="/pass/">Cruise Pass</a> — $9.99 for 30 days, one payment for the whole family, refundable no questions asked.</p>
+    </section>
+
+    <section>
+      <h2>Private by design</h2>
+      <ol class="rows">
+        <li><strong>End-to-end encrypted</strong><span>Messages leave your phone as sealed envelopes. Relays and other phones never see plaintext.</span></li>
+        <li><strong>No accounts</strong><span>Identity is a keypair generated on your phone. No email, phone number, or password.</span></li>
+        <li><strong>No tracking</strong><span>No analytics, advertising, or crash-reporting SDKs — in the apps or on this site.</span></li>
+      </ol>
+      <p style="margin-top:16px">Details in the <a href="/privacy/">privacy policy</a>.</p>
+    </section>
+
+    <section>
+      <h2>Status</h2>
+      <p>CruiseMesh is open source and in early development. Android (Kotlin) and iOS (SwiftUI) apps share a Rust core; store listings aren't public yet, so build from <a href="https://github.com/davidmjacobson/cruisemesh">source</a> for now.</p>
+    </section>
   </main>
+  <footer class="site-footer">
+    <div class="shell">CruiseMesh · offline-first family messaging<br><a href="https://github.com/davidmjacobson/cruisemesh">Source</a> · <a href="/pass/">Cruise Pass</a> · <a href="/privacy/">Privacy</a> · <a href="/support/">Support</a></div>
+  </footer>
 </body>
 </html>
-
