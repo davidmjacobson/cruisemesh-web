@@ -24,6 +24,19 @@ const relayPage = await readFile("dist/r/index.html", "utf8");
 if (!relayPage.includes("location.hash")) {
   throw new Error("Relay setup page must read the card from the URL fragment");
 }
+
+const termsPage = await readFile("dist/terms/index.html", "utf8");
+for (const requiredText of [
+  "Terms version:",
+  "Your content and conduct",
+  "Messaging safety, blocking, and reporting",
+  "abuse@cruisemesh.app",
+  "/privacy/",
+]) {
+  if (!termsPage.includes(requiredText)) {
+    throw new Error(`Terms page must include ${requiredText}`);
+  }
+}
 if (relayPage.includes("fetch(")) {
   throw new Error("Relay setup page must not transmit relay-card fragments");
 }
