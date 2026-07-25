@@ -2,6 +2,7 @@ import { createCheckoutSession, verifyStripeSignature } from "./stripe.js";
 import { relaySetupLink } from "./relay.js";
 import { fulfillCheckoutSession } from "./fulfill.js";
 import { escapeHtml } from "./email.js";
+import { renderSVG } from "uqr";
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -89,27 +90,75 @@ async function handleSuccess(request, env) {
   }
 
   const setupLink = relaySetupLink(url.origin, purchase.relay_url, purchase.family_token);
+  const setupCard = setupLink.slice(setupLink.indexOf("#") + 1);
+  const setupQr = renderSVG(setupLink, { ecc: "M", border: 4 });
   const emailedNote = purchase.email_sent_ms
     ? `<p>We also emailed everything to <strong>${escapeHtml(purchase.email)}</strong>.</p>`
-    : `<p>Save this page — keep your relay token somewhere safe.</p>`;
+    : `<p>Save this page or copy the setup card below.</p>`;
   const pendingNote = purchase.provisioned_ms
-    ? ""
-    : `<div class="notice" role="status">Your relay is still being activated — this normally takes under a minute. The token below will start working automatically.</div>`;
+    ? `<div class="notice success" role="status">Activated and ready to test in CruiseMesh.</div>`
+    : `<div class="notice" role="status">Activation is still finishing — this normally takes under a minute. If the app asks you to retry, wait a moment and test again.</div>`;
+  const setupCardJson = JSON.stringify(setupCard).replaceAll("<", "\\u003c");
 
   return page(
-    "Your relay is ready — CruiseMesh",
+    "Your Cruise Pass is ready — CruiseMesh",
     `<p class="eyebrow">Cruise Pass</p>
-     <h1>Your relay is ready.</h1>
-     <p class="lede">Open the setup link on a phone with CruiseMesh installed, or copy the details into <strong>Settings → Internet relay</strong>. Sharing friend cards spreads the relay to your whole family automatically.</p>
+     <h1>Your Cruise Pass is ready.</h1>
+     <p class="lede">Finish setup on a phone with CruiseMesh installed. The app shows the relay host, tests the connection, and saves it only after you confirm.</p>
      ${pendingNote}
-     <div class="actions"><a class="button" href="${escapeHtml(setupLink)}">Set up on this phone</a></div>
-     <h2 style="margin-top:28px">Relay URL</h2>
-     <div class="token">${escapeHtml(purchase.relay_url)}</div>
-     <h2 style="margin-top:20px">Relay token</h2>
-     <div class="token">${escapeHtml(purchase.family_token)}</div>
+     <div class="actions"><a class="button" href="${escapeHtml(setupLink)}">Open in CruiseMesh</a></div>
+     <ol class="setup-steps">
+       <li><strong>Open CruiseMesh</strong><span>Tap the button above on the phone you want to set up.</span></li>
+       <li><strong>Review</strong><span>Confirm the relay host shown by the app. Your household token stays hidden.</span></li>
+       <li><strong>Test and save</strong><span>CruiseMesh verifies the pass before replacing any saved relay.</span></li>
+     </ol>
+     <div class="setup-qr">
+       <h2>Set up another phone</h2>
+       ${setupQr}
+       <p>Scan with the other family phone. This configures internet delivery; it does not add a contact.</p>
+     </div>
+     <div class="actions secondary-actions">
+       <button class="button secondary" id="copy-setup-card" type="button">Copy setup card</button>
+       <a class="button secondary" href="/support/">Setup help</a>
+     </div>
+     <div class="notice" id="copy-notice" role="status" aria-live="polite"></div>
+     <details class="manual-setup" id="setup-card-details">
+       <summary>Show setup card</summary>
+       <div class="token" id="setup-card-text">${escapeHtml(setupCard)}</div>
+     </details>
      ${emailedNote}
      <p>Pass active until <strong>${escapeHtml(new Date(purchase.expires_ms).toUTCString())}</strong>. Treat the token like a household shared secret.</p>
-     <p>If Cruise Pass doesn't work out on your sailing, refunds are no questions asked — see <a href="/support/">support</a>.</p>`,
+     <p>If Cruise Pass doesn't work out on your sailing, refunds are no questions asked — see <a href="/support/">support</a>.</p>
+     <details class="manual-setup">
+       <summary>Custom relay details</summary>
+       <p>In CruiseMesh, open <strong>Settings → Cruise Pass → Custom relay</strong>.</p>
+       <h2>Relay URL</h2>
+       <div class="token">${escapeHtml(purchase.relay_url)}</div>
+       <h2>Relay token</h2>
+       <div class="token">${escapeHtml(purchase.family_token)}</div>
+     </details>
+     <script>
+       (() => {
+         const setupCard = ${setupCardJson};
+         document.querySelector("#copy-setup-card").addEventListener("click", async () => {
+           const notice = document.querySelector("#copy-notice");
+           try {
+             await navigator.clipboard.writeText(setupCard);
+             notice.textContent = "Setup card copied.";
+           } catch {
+             const details = document.querySelector("#setup-card-details");
+             const card = document.querySelector("#setup-card-text");
+             details.open = true;
+             const selection = getSelection();
+             const range = document.createRange();
+             range.selectNodeContents(card);
+             selection.removeAllRanges();
+             selection.addRange(range);
+             notice.textContent = "Select and copy the highlighted setup card.";
+           }
+         });
+       })();
+     </script>`,
   );
 }
 

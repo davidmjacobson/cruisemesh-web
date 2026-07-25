@@ -12,6 +12,22 @@
           {
             "/": "/f/",
             "comment": "Open the trailing-slash friend-card fallback in the app"
+          },
+          {
+            "/": "/r",
+            "comment": "Open Cruise Pass setup links in the app"
+          },
+          {
+            "/": "/r/",
+            "comment": "Open the trailing-slash Cruise Pass fallback in the app"
+          },
+          {
+            "/": "/lan",
+            "comment": "Open authenticated local-path hints in CruiseMesh"
+          },
+          {
+            "/": "/lan/",
+            "comment": "Open the trailing-slash local-path fallback in CruiseMesh"
           }
         ]
       }

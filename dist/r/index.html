@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>Set up a CruiseMesh relay</title>
+  <title>Set up Cruise Pass</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -16,12 +16,13 @@
   </header>
   <main class="shell">
     <div class="intro">
-      <h1>Relay setup</h1>
-      <p class="lede" id="intro">This relay link should open directly in CruiseMesh when the app is installed.</p>
+      <h1>Set up Cruise Pass</h1>
+      <p class="lede" id="intro">This Cruise Pass link should open directly in CruiseMesh when the app is installed.</p>
       <div id="card-controls" hidden>
-        <div class="token" id="token" aria-label="CruiseMesh relay setup card"></div>
+        <div class="token" id="token" aria-label="Cruise Pass setup card"></div>
         <div class="actions">
-          <button class="button" id="copy" type="button">Copy relay card</button>
+          <a class="button" id="open" href="">Open in CruiseMesh</a>
+          <button class="button" id="copy" type="button">Copy setup card</button>
           <a class="button secondary" href="/support/">Get help</a>
         </div>
         <div class="notice" id="notice" role="status" aria-live="polite"></div>
@@ -30,7 +31,7 @@
 
     <section>
       <h2>App installed but nothing happened?</h2>
-      <p>Open CruiseMesh, go to <strong>Settings → Internet relay</strong>, and paste the relay card above.</p>
+      <p>Update to CruiseMesh 1.0.2 or later. Then open CruiseMesh, go to <strong>Settings → Cruise Pass</strong>, paste the setup card above, choose <strong>Review</strong>, then <strong>Test and use</strong>.</p>
     </section>
 
     <section>
@@ -39,31 +40,32 @@
     </section>
   </main>
   <footer class="site-footer">
-    <div class="shell">The relay card stays after the <code>#</code> in this URL. It is not sent to this website or stored by Cloudflare.</div>
+    <div class="shell">The setup card stays after the <code>#</code> in this URL. It is not sent to this website or stored by Cloudflare.</div>
   </footer>
   <script>
     (() => {
       const raw = location.hash.slice(1);
       const match = raw.match(/CMRELAY1:[A-Za-z0-9_-]+/);
       if (!match) {
-        document.querySelector("#intro").textContent = "This link does not contain a complete CruiseMesh relay card. Check your purchase email for the full setup link.";
+        document.querySelector("#intro").textContent = "This link does not contain a complete Cruise Pass setup card. Check your purchase email for the full setup link.";
         return;
       }
       const token = match[0];
+      document.querySelector("#open").href = location.href;
       document.querySelector("#token").textContent = token;
       document.querySelector("#card-controls").hidden = false;
       document.querySelector("#copy").addEventListener("click", async () => {
         const notice = document.querySelector("#notice");
         try {
           await navigator.clipboard.writeText(token);
-          notice.textContent = "Relay card copied. Paste it into CruiseMesh.";
+          notice.textContent = "Setup card copied. Open Settings → Cruise Pass in CruiseMesh and paste it.";
         } catch {
           const selection = getSelection();
           const range = document.createRange();
           range.selectNodeContents(document.querySelector("#token"));
           selection.removeAllRanges();
           selection.addRange(range);
-          notice.textContent = "Select and copy the highlighted relay card.";
+          notice.textContent = "Select and copy the highlighted setup card.";
         }
       });
     })();
