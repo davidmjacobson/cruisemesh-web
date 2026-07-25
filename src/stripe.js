@@ -28,7 +28,15 @@ async function stripeRequest(env, method, path, params) {
   const response = await fetch(url, init);
   const body = await response.json();
   if (!response.ok) {
-    throw new Error(`Stripe ${method} ${path} failed (${response.status}): ${body?.error?.message ?? "unknown error"}`);
+    const error = new Error(
+      `Stripe ${method} ${path} failed (${response.status}): ${body?.error?.message ?? "unknown error"}`,
+    );
+    // Carried so callers can tell "this session id is not a thing" (a
+    // mistyped or foreign URL, which deserves friendly copy) from "Stripe is
+    // having a bad day" (which deserves a retry and a generic error).
+    error.status = response.status;
+    error.stripeCode = body?.error?.code ?? null;
+    throw error;
   }
   return body;
 }
