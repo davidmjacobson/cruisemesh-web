@@ -128,6 +128,26 @@ section:first-of-type, .intro { margin-top: 0; padding-top: 0; border-top: 0; }
 }
 
 .notice { margin-top: 14px; min-height: 1.4em; color: var(--accent-ink); font-weight: 550; }
+.notice.success { padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.setup-steps { margin: 24px 0 0; padding-left: 24px; }
+.setup-steps li { padding: 6px 0 6px 4px; }
+.setup-steps strong, .setup-steps span { display: block; }
+.setup-steps span { color: var(--muted); }
+.setup-qr { max-width: 22rem; margin: 26px 0 0; }
+.setup-qr svg {
+  display: block;
+  width: min(100%, 18rem);
+  height: auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+.setup-qr p { color: var(--muted); }
+.secondary-actions { margin-top: 18px; }
+.manual-setup { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
+.manual-setup summary { cursor: pointer; color: var(--muted); font-weight: 600; }
+.manual-setup h2 { margin-top: 18px; }
 code {
   padding: 0.1em 0.35em;
   border-radius: 4px;

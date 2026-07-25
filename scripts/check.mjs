@@ -50,6 +50,48 @@ const setupToken = relaySetupToken("https://relay.example", "abc123");
 if (!/^CMRELAY1:[A-Za-z0-9_-]+$/.test(setupToken)) {
   throw new Error("Relay setup tokens must be fragment-safe base64url");
 }
+const goldenSetupToken = "CMRELAY1:eyJ2IjoxLCJyZWxheV91cmwiOiJodHRwczovL3JlbGF5LmV4YW1wbGUiLCJyZWxheV90b2tlbiI6ImFiYzEyMyJ9";
+if (setupToken !== goldenSetupToken) {
+  throw new Error("Relay setup token no longer matches the mobile golden vector");
+}
+const setupPayload = JSON.parse(Buffer.from(setupToken.slice("CMRELAY1:".length), "base64url").toString("utf8"));
+if (setupPayload.v !== 1 || setupPayload.relay_url !== "https://relay.example" || setupPayload.relay_token !== "abc123") {
+  throw new Error("Relay setup token payload does not round-trip");
+}
+
+const association = JSON.parse(await readFile("dist/.well-known/apple-app-site-association", "utf8"));
+const associatedPaths = association.applinks.details.flatMap((detail) => detail.components.map((component) => component["/"]));
+for (const path of ["/f", "/f/", "/r", "/r/"]) {
+  if (!associatedPaths.includes(path)) throw new Error(`Universal Links must include ${path}`);
+}
+
+const supportPage = await readFile("dist/support/index.html", "utf8");
+if (supportPage.includes("Settings → Internet relay")) {
+  throw new Error("Support must not reference the retired Internet relay screen");
+}
+for (const requiredText of ["Settings → Cruise Pass", "Connection details", "Test and use"]) {
+  if (!supportPage.includes(requiredText)) throw new Error(`Support must include ${requiredText}`);
+}
+for (const requiredText of ["CruiseMesh 1.0.2", "Save and check later", "Show setup QR"]) {
+  if (!supportPage.includes(requiredText) && !(await readFile("src/email.js", "utf8")).includes(requiredText)) {
+    throw new Error(`Public setup instructions must include ${requiredText}`);
+  }
+}
+
+const workerSource = await readFile("src/index.js", "utf8");
+for (const requiredText of ["Open in CruiseMesh", "Test and save", "Copy setup card", "Set up another phone", "Custom relay details"]) {
+  if (!workerSource.includes(requiredText)) throw new Error(`Purchase success flow must include ${requiredText}`);
+}
+if (!workerSource.includes("renderSVG") || !workerSource.includes("setup-qr")) {
+  throw new Error("Purchase success flow must render an in-page second-phone setup QR");
+}
+const emailSource = await readFile("src/email.js", "utf8");
+if (!emailSource.includes("each family phone needs this setup")) {
+  throw new Error("Credential email must explain that every family phone needs setup");
+}
+if (emailSource.includes("shared automatically through the friend cards")) {
+  throw new Error("Credential email must not imply that friend cards configure Cruise Pass");
+}
 
 async function listFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
