@@ -17,7 +17,15 @@ export async function fulfillCheckoutSession(env, sessionId) {
   let purchase = await getPurchase(env, sessionId);
 
   if (!purchase) {
-    const session = await getCheckoutSession(env, sessionId);
+    let session;
+    try {
+      session = await getCheckoutSession(env, sessionId);
+    } catch (error) {
+      // An unknown session id is a bad URL, not an outage: fall through to
+      // the "payment not completed" page rather than "something went wrong".
+      if (error.status === 404 || error.stripeCode === "resource_missing") return null;
+      throw error;
+    }
     if (session.payment_status !== "paid") return null;
     const now = Date.now();
     // ON CONFLICT DO NOTHING: if the webhook and the success page race, only
@@ -39,6 +47,10 @@ export async function fulfillCheckoutSession(env, sessionId) {
       )
       .run();
     purchase = await getPurchase(env, sessionId);
+    // A row that vanishes between insert and read-back means something is
+    // wrong with D1, not that the customer did not pay. Throw so the webhook
+    // 500s and Stripe retries, instead of a TypeError on the next line.
+    if (!purchase) throw new Error(`purchase row missing after insert for ${sessionId}`);
   }
 
   if (!purchase.provisioned_ms) {
@@ -70,6 +82,15 @@ export async function fulfillCheckoutSession(env, sessionId) {
       }
     }
     purchase = await getPurchase(env, sessionId);
+  } else if (!purchase.email_sent_ms) {
+    // Never let a credential email go missing quietly. Until the EMAIL
+    // binding is enabled in wrangler.jsonc the success page is the only copy
+    // of the setup link a buyer ever gets, and nothing else in the system
+    // records that fact.
+    console.error(
+      `credentials not emailed for ${sessionId}: ` +
+        (env.EMAIL ? "no email address on the checkout session" : "EMAIL binding is not configured"),
+    );
   }
 
   return purchase;
