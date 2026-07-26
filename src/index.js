@@ -120,7 +120,7 @@ async function handleSuccess(request, env) {
     : `<p>Save this page or copy the setup card below.</p>`;
   const pendingNote = purchase.provisioned_ms
     ? `<div class="notice success" role="status">Activated and ready to test in CruiseMesh.</div>`
-    : `<div class="notice" role="status">Activation is still finishing — this normally takes under a minute. If the app asks you to retry, wait a moment and test again.</div>`;
+    : `<div class="notice" role="status">Activation is still finishing. This normally takes under a minute; if the app asks you to retry, wait a moment and test again.</div>`;
   const setupCardJson = JSON.stringify(setupCard).replaceAll("<", "\\u003c");
 
   return page(
@@ -151,7 +151,7 @@ async function handleSuccess(request, env) {
      </details>
      ${emailedNote}
      <p>Pass active until <strong>${escapeHtml(formatExpiry(purchase.expires_ms))}</strong>. Anyone with this setup card can use your family's internet delivery, so share it only with your own phones.</p>
-     <p>If Cruise Pass doesn't work out on your sailing, refunds are no questions asked — see <a href="/support/">support</a>.</p>
+     <p>If Cruise Pass doesn't work out on your sailing, refunds are no questions asked; see <a href="/support/">support</a>.</p>
      <details class="manual-setup">
        <summary>Custom relay details</summary>
        <p>In CruiseMesh, open <strong>Settings → Cruise Pass → Custom relay</strong>.</p>

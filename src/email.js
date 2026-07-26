@@ -33,7 +33,7 @@ export async function sendCredentialEmail(env, purchase, setupLink) {
     "2. Choose Review, and check the host CruiseMesh shows.",
     "3. Choose Test and use. CruiseMesh saves the pass only after that check succeeds.",
     "",
-    "If the link did not open CruiseMesh, copy the setup card from the end of it — the text starting CMRELAY1: — then open Settings -> Cruise Pass, choose Paste card, then Review.",
+    "If the link did not open CruiseMesh, copy the setup card (the text starting CMRELAY1:) from the end of it, then open Settings -> Cruise Pass, choose Paste card, then Review.",
     "",
     "One pass covers your whole family, and each family phone needs this setup. Once the first phone is ready, use Set up another phone or Show setup QR in Settings -> Cruise Pass.",
     "",
@@ -45,30 +45,30 @@ export async function sendCredentialEmail(env, purchase, setupLink) {
     "",
     "Need help? Reply to this email, or write to support@cruisemesh.app.",
     "",
-    "Advanced — to enter the details by hand, open Settings -> Cruise Pass -> Custom relay:",
+    "Advanced: to enter the details by hand, open Settings -> Cruise Pass -> Custom relay.",
     `  Relay URL:   ${purchase.relay_url}`,
     `  Relay token: ${purchase.family_token}`,
   ].join("\n");
 
   const html = `
-    <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#12211d;line-height:1.6">
+    <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a222a;line-height:1.6">
       <h1 style="font-size:1.4rem">Your Cruise Pass is ready</h1>
-      <p><a href="${escapeHtml(setupLink)}" style="display:inline-block;padding:12px 20px;border-radius:12px;background:#087f68;color:#fff;text-decoration:none;font-weight:700">Open in CruiseMesh</a></p>
+      <p><a href="${escapeHtml(setupLink)}" style="display:inline-block;padding:12px 20px;border-radius:12px;background:#0d7186;color:#fff;text-decoration:none;font-weight:700">Open in CruiseMesh</a></p>
       <ol>
         <li>Tap <strong>Open in CruiseMesh</strong> above, on the phone you want to set up.</li>
         <li>Choose <strong>Review</strong>, and check the host CruiseMesh shows.</li>
         <li>Choose <strong>Test and use</strong>. CruiseMesh saves the pass only after that check succeeds.</li>
       </ol>
-      <p>If the link did not open CruiseMesh, copy the setup card from the end of it — the text starting <code>CMRELAY1:</code> — then open <strong>Settings &rarr; Cruise Pass</strong>, choose <strong>Paste card</strong>, then <strong>Review</strong>.</p>
+      <p>If the link did not open CruiseMesh, copy the setup card (the text starting <code>CMRELAY1:</code>) from the end of it, then open <strong>Settings &rarr; Cruise Pass</strong>, choose <strong>Paste card</strong>, then <strong>Review</strong>.</p>
       <p>One pass covers your whole family, and each family phone needs this setup. Once the first phone is ready, use <strong>Set up another phone</strong> or <strong>Show setup QR</strong> in Settings &rarr; Cruise Pass.</p>
       <p>Cruise Pass sets up internet delivery. It does not add contacts, and it does not share a phone's internet connection.</p>
       <p>Pass expires: ${escapeHtml(expiry)}</p>
       <p>Anyone with this link can use your family's internet delivery, so share it only with your own phones.</p>
-      <p style="color:#5c6e68;font-size:0.9rem">Need help? Reply to this email, or write to <a href="mailto:support@cruisemesh.app">support@cruisemesh.app</a>.</p>
+      <p style="color:#556472;font-size:0.9rem">Need help? Reply to this email, or write to <a href="mailto:support@cruisemesh.app">support@cruisemesh.app</a>.</p>
       <details style="margin-top:20px">
-        <summary style="color:#5c6e68;font-size:0.9rem;cursor:pointer">Advanced: enter the details by hand</summary>
+        <summary style="color:#556472;font-size:0.9rem;cursor:pointer">Advanced: enter the details by hand</summary>
         <p style="font-size:0.9rem">In CruiseMesh, open <strong>Settings &rarr; Cruise Pass &rarr; Custom relay</strong>.</p>
-        <p style="font-family:monospace;background:#f0f5f3;padding:12px;border-radius:8px;word-break:break-all;font-size:0.9rem">
+        <p style="font-family:monospace;background:#f3f6f8;padding:12px;border-radius:8px;word-break:break-all;font-size:0.9rem">
           Relay URL: ${escapeHtml(purchase.relay_url)}<br>
           Relay token: ${escapeHtml(purchase.family_token)}
         </p>
