@@ -21,9 +21,11 @@
     "enabled": true
   },
   "vars": {
-    // Stripe Price id for the Cruise Pass one-time payment (test mode).
-    // Swap for the live-mode price id when going live.
-    "STRIPE_PRICE_ID": "price_1TvS7y0JgNc7Eg1GDzG9KiDc",
+    // Stripe Price id for the Cruise Pass one-time payment (LIVE mode, on
+    // acct_1TvRdV0JgNc7Eg1G "CruiseMesh"). Must be swapped in the same breath
+    // as STRIPE_SECRET_KEY — a live key with a test price id, or the reverse,
+    // fails checkout with "no such price". Test price: price_1TvS7y0JgNc7Eg1GDzG9KiDc
+    "STRIPE_PRICE_ID": "price_1TxPJx0JgNc7Eg1GJHqWyn0D",
     // Public base URL of the hosted relay that new passes are provisioned on.
     "RELAY_URL": "https://relay.cruisemesh.app",
     // Where the relayd admin API is reachable (usually the same host).
