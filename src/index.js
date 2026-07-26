@@ -1,7 +1,7 @@
 import { createCheckoutSession, verifyStripeSignature } from "./stripe.js";
 import { relaySetupLink } from "./relay.js";
 import { fulfillCheckoutSession } from "./fulfill.js";
-import { escapeHtml } from "./email.js";
+import { escapeHtml, formatExpiry } from "./email.js";
 import { renderSVG } from "uqr";
 
 function json(body, status = 200) {
@@ -104,13 +104,13 @@ async function handleSuccess(request, env) {
     "Your Cruise Pass is ready — CruiseMesh",
     `<p class="eyebrow">Cruise Pass</p>
      <h1>Your Cruise Pass is ready.</h1>
-     <p class="lede">Finish setup on a phone with CruiseMesh installed. The app shows the relay host, tests the connection, and saves it only after you confirm.</p>
+     <p class="lede">Finish setup on a phone with CruiseMesh installed. The app shows the host, tests the connection, and saves it only after you confirm.</p>
      ${pendingNote}
      <div class="actions"><a class="button" href="${escapeHtml(setupLink)}">Open in CruiseMesh</a></div>
      <ol class="setup-steps">
        <li><strong>Open CruiseMesh</strong><span>Tap the button above on the phone you want to set up.</span></li>
-       <li><strong>Review</strong><span>Confirm the relay host shown by the app. Your household token stays hidden.</span></li>
-       <li><strong>Test and save</strong><span>CruiseMesh verifies the pass before replacing any saved relay.</span></li>
+       <li><strong>Review</strong><span>Check the host CruiseMesh shows. Your family's token stays hidden.</span></li>
+       <li><strong>Test and use</strong><span>CruiseMesh saves the pass only after that check succeeds.</span></li>
      </ol>
      <div class="setup-qr">
        <h2>Set up another phone</h2>
@@ -127,7 +127,7 @@ async function handleSuccess(request, env) {
        <div class="token" id="setup-card-text">${escapeHtml(setupCard)}</div>
      </details>
      ${emailedNote}
-     <p>Pass active until <strong>${escapeHtml(new Date(purchase.expires_ms).toUTCString())}</strong>. Treat the token like a household shared secret.</p>
+     <p>Pass active until <strong>${escapeHtml(formatExpiry(purchase.expires_ms))}</strong>. Anyone with this setup card can use your family's internet delivery, so share it only with your own phones.</p>
      <p>If Cruise Pass doesn't work out on your sailing, refunds are no questions asked — see <a href="/support/">support</a>.</p>
      <details class="manual-setup">
        <summary>Custom relay details</summary>

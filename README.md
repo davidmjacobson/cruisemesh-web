@@ -73,15 +73,20 @@ working — the `/api/` endpoints just return errors.
    Until this exists, paid purchases show "activation pending" and Stripe
    retries the webhook until provisioning succeeds.
 
-5. **Email** — onboard the domain to Cloudflare Email Sending and uncomment
-   the `send_email` binding in `wrangler.jsonc`:
+5. **Email** — credential emails go out through [Resend](https://resend.com).
+   Add `cruisemesh.app` as a domain there and apply the DKIM records it gives
+   you; merge its SPF `include:` into the domain's **existing single** SPF TXT
+   record rather than adding a second one (two SPF records are an RFC 7208
+   permerror and quietly wreck deliverability). Then:
 
    ```sh
-   npx wrangler email sending enable cruisemesh.app
+   npx wrangler secret put RESEND_API_KEY
    ```
 
-   (May require a fresh `npx wrangler login` to pick up email scopes.)
-   Without this, credential delivery is success-page only — no email is sent.
+   Sends are rejected until the domain is verified, and skipped entirely while
+   the secret is unset — in both cases credential delivery is success-page
+   only. Inbound mail (`abuse@`, `support@`) stays on Cloudflare Email
+   Routing; only sending moved.
 
 6. Deploy (`npm run deploy`) and run a test purchase with a Stripe test key
    before switching the secrets to live keys.
