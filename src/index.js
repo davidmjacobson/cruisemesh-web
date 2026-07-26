@@ -1,7 +1,7 @@
 import { createCheckoutSession, verifyStripeSignature } from "./stripe.js";
 import { relaySetupLink } from "./relay.js";
 import { fulfillCheckoutSession } from "./fulfill.js";
-import { escapeHtml } from "./email.js";
+import { escapeHtml, formatExpiry } from "./email.js";
 import { renderSVG } from "uqr";
 
 function json(body, status = 200) {
@@ -20,12 +20,35 @@ function page(title, body) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>${escapeHtml(title)}</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#fefefd" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f151a" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <header class="site-header">
     <div class="shell">
-      <a class="brand" href="/">CruiseMesh</a>
+      <a class="brand" href="/">
+        <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+          <path fill="#fff" stroke="#0e2747" stroke-width="1.2" stroke-linejoin="round" d="M14 45 4 62l23-8Z"/>
+          <circle cx="32" cy="30" r="26" fill="#0e2747"/>
+          <circle cx="32" cy="30" r="23.5" fill="none" stroke="#fff" stroke-width="5"/>
+          <circle cx="32" cy="30" r="25.4" fill="none" stroke="#0e2747" stroke-width="1.2"/>
+          <path fill="none" stroke="#a9dcee" stroke-width="2.4" stroke-linecap="round" d="M32 14 20 22M32 14l12 8M32 14v14.5M20 22l12 6.5M44 22l-12 6.5M24 38l8-9.5M40 38l-8-9.5"/>
+          <circle cx="32" cy="14" r="3.4" fill="#fff"/>
+          <circle cx="20" cy="22" r="3.4" fill="#fff"/>
+          <circle cx="44" cy="22" r="3.4" fill="#fff"/>
+          <circle cx="32" cy="28.5" r="3.6" fill="#d8f1f8"/>
+          <circle cx="24" cy="38" r="3.4" fill="#59cfe4"/>
+          <circle cx="40" cy="38" r="3.4" fill="#59cfe4"/>
+          <path d="M24.5 40.5 32 35.5l7.5 5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M24 43h16l-3 8.5q-5 2.8-10 0Z" fill="#fff"/>
+          <path d="M14 52q10-5.5 19-1t24-3.5" fill="none" stroke="#3fc9de" stroke-width="4" stroke-linecap="round"/>
+          <path d="M28 57q9 3.5 19-1.5" fill="none" stroke="#2fb3cf" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        CruiseMesh
+      </a>
       <nav><a href="/support/">Support</a></nav>
     </div>
   </header>
@@ -104,13 +127,13 @@ async function handleSuccess(request, env) {
     "Your Cruise Pass is ready — CruiseMesh",
     `<p class="eyebrow">Cruise Pass</p>
      <h1>Your Cruise Pass is ready.</h1>
-     <p class="lede">Finish setup on a phone with CruiseMesh installed. The app shows the relay host, tests the connection, and saves it only after you confirm.</p>
+     <p class="lede">Finish setup on a phone with CruiseMesh installed. The app shows the host, tests the connection, and saves it only after you confirm.</p>
      ${pendingNote}
      <div class="actions"><a class="button" href="${escapeHtml(setupLink)}">Open in CruiseMesh</a></div>
      <ol class="setup-steps">
        <li><strong>Open CruiseMesh</strong><span>Tap the button above on the phone you want to set up.</span></li>
-       <li><strong>Review</strong><span>Confirm the relay host shown by the app. Your household token stays hidden.</span></li>
-       <li><strong>Test and save</strong><span>CruiseMesh verifies the pass before replacing any saved relay.</span></li>
+       <li><strong>Review</strong><span>Check the host CruiseMesh shows. Your family's token stays hidden.</span></li>
+       <li><strong>Test and use</strong><span>CruiseMesh saves the pass only after that check succeeds.</span></li>
      </ol>
      <div class="setup-qr">
        <h2>Set up another phone</h2>
@@ -127,7 +150,7 @@ async function handleSuccess(request, env) {
        <div class="token" id="setup-card-text">${escapeHtml(setupCard)}</div>
      </details>
      ${emailedNote}
-     <p>Pass active until <strong>${escapeHtml(new Date(purchase.expires_ms).toUTCString())}</strong>. Treat the token like a household shared secret.</p>
+     <p>Pass active until <strong>${escapeHtml(formatExpiry(purchase.expires_ms))}</strong>. Anyone with this setup card can use your family's internet delivery, so share it only with your own phones.</p>
      <p>If Cruise Pass doesn't work out on your sailing, refunds are no questions asked — see <a href="/support/">support</a>.</p>
      <details class="manual-setup">
        <summary>Custom relay details</summary>

@@ -5,20 +5,44 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="CruiseMesh sends end-to-end encrypted messages between phones over ship Wi-Fi and Bluetooth — no internet package needed. For cruise ships and anywhere coverage is unreliable.">
   <meta property="og:title" content="CruiseMesh — offline-first family messaging">
-  <meta property="og:description" content="End-to-end encrypted messaging over ship Wi-Fi and Bluetooth, with an optional internet relay to reach family at home. No accounts, no tracking.">
+  <meta property="og:description" content="End-to-end encrypted messaging over ship Wi-Fi and Bluetooth, with optional internet delivery to reach family at home. No accounts, no tracking.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://cruisemesh.app/">
+  <meta property="og:image" content="https://cruisemesh.app/og.png">
   <title>CruiseMesh — offline-first family messaging</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#fefefd" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f151a" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <header class="site-header">
     <div class="shell">
-      <a class="brand" href="/">CruiseMesh</a>
+      <a class="brand" href="/">
+        <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+          <path fill="#fff" stroke="#0e2747" stroke-width="1.2" stroke-linejoin="round" d="M14 45 4 62l23-8Z"/>
+          <circle cx="32" cy="30" r="26" fill="#0e2747"/>
+          <circle cx="32" cy="30" r="23.5" fill="none" stroke="#fff" stroke-width="5"/>
+          <circle cx="32" cy="30" r="25.4" fill="none" stroke="#0e2747" stroke-width="1.2"/>
+          <path fill="none" stroke="#a9dcee" stroke-width="2.4" stroke-linecap="round" d="M32 14 20 22M32 14l12 8M32 14v14.5M20 22l12 6.5M44 22l-12 6.5M24 38l8-9.5M40 38l-8-9.5"/>
+          <circle cx="32" cy="14" r="3.4" fill="#fff"/>
+          <circle cx="20" cy="22" r="3.4" fill="#fff"/>
+          <circle cx="44" cy="22" r="3.4" fill="#fff"/>
+          <circle cx="32" cy="28.5" r="3.6" fill="#d8f1f8"/>
+          <circle cx="24" cy="38" r="3.4" fill="#59cfe4"/>
+          <circle cx="40" cy="38" r="3.4" fill="#59cfe4"/>
+          <path d="M24.5 40.5 32 35.5l7.5 5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M24 43h16l-3 8.5q-5 2.8-10 0Z" fill="#fff"/>
+          <path d="M14 52q10-5.5 19-1t24-3.5" fill="none" stroke="#3fc9de" stroke-width="4" stroke-linecap="round"/>
+          <path d="M28 57q9 3.5 19-1.5" fill="none" stroke="#2fb3cf" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        CruiseMesh
+      </a>
       <nav>
-        <a href="/pass/">Cruise Pass</a>
-        <a href="https://github.com/davidmjacobson/cruisemesh">GitHub</a>
         <a href="/support/">Support</a>
+        <a href="https://github.com/davidmjacobson/cruisemesh">GitHub</a>
+        <a class="nav-cta" href="/pass/">Cruise Pass</a>
       </nav>
     </div>
   </header>
@@ -26,64 +50,184 @@
     <div class="intro">
       <p class="eyebrow">Offline-first family messaging</p>
       <h1>Text your family when there's no signal.</h1>
-      <p class="lede">CruiseMesh carries end-to-end encrypted messages between phones over the ship's Wi-Fi and Bluetooth — no internet package needed. It's built for cruise ships and anywhere coverage is unreliable — no accounts, no phone numbers, no tracking.</p>
+      <p class="lede">CruiseMesh carries end-to-end encrypted messages between phones over the ship's Wi-Fi and Bluetooth — no internet package needed. Built for cruise ships and anywhere coverage is unreliable. No accounts, no phone numbers, no tracking.</p>
       <div class="actions">
-        <a class="button" href="https://github.com/davidmjacobson/cruisemesh">View on GitHub</a>
-        <a class="button secondary" href="https://github.com/davidmjacobson/cruisemesh/blob/master/DESIGN.md">Read the design</a>
+        <a class="button" href="#how">See how it works</a>
+        <a class="button secondary" href="/pass/">Cruise Pass · $9.99</a>
       </div>
+      <figure class="hero-art" role="img" aria-label="Illustration: phones on a cruise ship pass messages to each other directly, and one phone with internet access relays everyone's messages to a house on shore.">
+        <svg class="scene" viewBox="0 0 720 300" aria-hidden="true">
+          <circle class="sun" cx="92" cy="64" r="20"/>
+          <path class="ln" d="M158 76q6-7 12 0M178 66q5-6 10 0" opacity="0.6"/>
+          <circle class="paper" cx="470" cy="84" r="17"/>
+          <circle class="ln" cx="470" cy="84" r="17" fill="none"/>
+          <path class="ln" d="M470 67a8.5 17 0 0 0 0 34a8.5 17 0 0 0 0-34M453 84h34"/>
+          <path class="hull" d="M132 196h190l-20 42H152Z"/>
+          <rect class="hull2" x="160" y="168" width="136" height="28" rx="3"/>
+          <rect class="hull" x="182" y="146" width="84" height="22" rx="3"/>
+          <path class="hull" d="M272 168l4-20h14l4 20Z"/>
+          <rect class="paper" x="190" y="152" width="10" height="8" rx="1.5"/>
+          <rect class="paper" x="208" y="152" width="10" height="8" rx="1.5"/>
+          <rect class="paper" x="226" y="152" width="10" height="8" rx="1.5"/>
+          <rect class="paper" x="244" y="152" width="10" height="8" rx="1.5"/>
+          <rect class="paper" x="170" y="178" width="11" height="9" rx="1.5"/>
+          <rect class="paper" x="190" y="178" width="11" height="9" rx="1.5"/>
+          <rect class="paper" x="210" y="178" width="11" height="9" rx="1.5"/>
+          <rect class="paper" x="230" y="178" width="11" height="9" rx="1.5"/>
+          <rect class="paper" x="250" y="178" width="11" height="9" rx="1.5"/>
+          <rect class="paper" x="270" y="178" width="11" height="9" rx="1.5"/>
+          <circle class="paper" cx="176" cy="210" r="3"/>
+          <circle class="paper" cx="198" cy="210" r="3"/>
+          <circle class="paper" cx="220" cy="210" r="3"/>
+          <circle class="paper" cx="242" cy="210" r="3"/>
+          <circle class="paper" cx="264" cy="210" r="3"/>
+          <circle class="paper" cx="286" cy="210" r="3"/>
+          <rect class="phone" x="190" y="122" width="14" height="24" rx="3.5"/>
+          <rect class="phone" x="298" y="172" width="14" height="24" rx="3.5"/>
+          <path class="sea-deep" d="M540 226Q610 196 720 208v94H540Z"/>
+          <rect class="hull2" x="612" y="176" width="44" height="32"/>
+          <path class="hull" d="M606 176l28-22 28 22Z"/>
+          <rect class="paper" x="628" y="190" width="12" height="18" rx="1"/>
+          <rect class="phone" x="668" y="186" width="14" height="24" rx="3.5"/>
+          <path class="sea" d="M0 224C80 216 150 230 240 223S420 216 520 224 660 230 720 221v79H0Z"/>
+          <path class="sea-deep" d="M0 266C120 258 260 272 400 265S640 260 720 266v34H0Z" opacity="0.7"/>
+          <path class="ln" d="M60 244q10-5 20 0M350 250q10-5 20 0M560 246q10-5 20 0" opacity="0.5"/>
+          <path class="flow" d="M197 116Q251 88 305 166"/>
+          <path class="flow" d="M305 162Q370 20 455 72"/>
+          <path class="flow" d="M486 76Q600 40 675 180"/>
+          <circle class="node" cx="197" cy="116" r="3.4"/>
+          <circle class="node" cx="305" cy="166" r="3.4"/>
+          <circle class="node-ring" cx="305" cy="166" r="8"/>
+          <circle class="node" cx="675" cy="180" r="3.4"/>
+        </svg>
+      </figure>
+      <p class="art-caption">Phones on board deliver to each other directly. When one phone gets internet, it carries the whole family's messages home and back.</p>
     </div>
 
     <section class="origin-story" aria-labelledby="origin-story-title">
       <div class="story-copy">
         <p class="eyebrow">Why CruiseMesh exists</p>
         <h2 id="origin-story-title">A $7-a-day surprise sparked a better idea.</h2>
-        <p>On a cruise with family and friends, David learned that sending them a quick message would mean buying the cruise line's <strong>$7-per-phone, per-day messaging plan</strong>. It wasn't even internet access. For four people on a seven-day cruise, that's $196 just to coordinate dinner, share a meeting point, or say “I'm back on board.”</p>
-        <p>That felt crazy. Phones can already communicate without the internet: over local Wi-Fi when the ship allows it, over Bluetooth when they're nearby, and by carrying encrypted messages until another phone comes within reach.</p>
-        <p class="story-answer">CruiseMesh grew from one simple question: <strong>what if family messaging used the connections already in your pocket?</strong></p>
+        <p>On a cruise with my family and friends, I found out that sending them a quick message meant buying the cruise line's <strong>$7-per-phone, per-day messaging plan</strong> — and that isn't even internet access. For four people on a seven-day cruise, that's $196 just to coordinate dinner, share a meeting point, or say "I'm back on board."</p>
+        <p>That felt absurd. Phones can already talk to each other without the internet: over the ship's Wi-Fi when it allows it, over Bluetooth when they're nearby, and by carrying sealed messages along until paths cross.</p>
+        <p class="story-answer">CruiseMesh grew from one question: <strong>what if family messaging just used the connections already in your pocket?</strong></p>
+        <p class="story-sign">— David, who builds CruiseMesh</p>
       </div>
-      <p class="story-price" aria-label="On David's cruise, the messaging plan cost seven dollars per phone, every day. CruiseMesh needs no internet package.">
-        <span class="story-price-context">On David's cruise<br>messaging cost</span>
+      <p class="story-price" aria-label="On our cruise, the messaging plan cost seven dollars per phone, every day. CruiseMesh messaging is free on board.">
+        <span class="story-price-context">On our cruise<br>messaging cost</span>
         <span class="story-price-amount">$7</span>
         <span>per phone<br>every day</span>
-        <span class="story-price-contrast">CruiseMesh needs no internet package</span>
+        <span class="story-price-contrast">CruiseMesh messaging is free on board</span>
       </p>
     </section>
 
-    <section>
+    <section id="how">
       <h2>How messages get through</h2>
       <p>Messages are sealed on your phone and delivered by whichever route exists. Minutes of delay are expected and fine.</p>
-      <ol class="rows">
-        <li><strong>Ship Wi-Fi</strong><span>Phones on the same ship network find each other and deliver instantly, across the whole ship — no internet package needed. Some ships block phone-to-phone traffic; the app checks and tells you.</span></li>
-        <li><strong>Direct contact</strong><span>Phones within Bluetooth range exchange messages immediately.</span></li>
-        <li><strong>Data mule</strong><span>A family member's phone carries your sealed message until paths cross with the recipient.</span></li>
-        <li><strong>Internet delivery</strong><span>When any one family phone gets online, it carries the whole family's sealed messages through a mailbox on the internet — needs a <a href="/pass/">Cruise Pass</a> or your own relay server.</span></li>
+      <ol class="routes">
+        <li>
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 9.5a11.5 11.5 0 0 1 16 0M7.3 13a7 7 0 0 1 9.4 0"/><circle class="fl" cx="12" cy="16.8" r="1.7"/></svg></span>
+          <div><strong>Ship Wi-Fi</strong><span>Phones on the same ship network find each other and deliver instantly, across the whole ship — no internet package needed. Some ships block phone-to-phone traffic; the app checks and tells you.</span></div>
+        </li>
+        <li>
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 7.5l10 9.5-5 4.5v-19l5 4.5L7 16.5"/></svg></span>
+          <div><strong>Direct contact</strong><span>Phones within Bluetooth range exchange messages immediately.</span></div>
+        </li>
+        <li>
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="5" r="2"/><path d="M10.5 7.5V14M10.5 14l-3.5 6M10.5 14l3.5 6M10.5 9.5l3.5 1.5"/><rect x="14.5" y="9.5" width="4.5" height="7.5" rx="1.3"/></svg></span>
+          <div><strong>Carried along</strong><span>A family member's phone carries your sealed message until paths cross with the recipient.</span></div>
+        </li>
+        <li>
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a4 8.5 0 0 0 0 17a4 8.5 0 0 0 0-17M3.5 12h17"/></svg></span>
+          <div><strong>Internet delivery</strong><span>When any one family phone gets online, it carries the whole family's sealed messages up and back — including to family at home. Needs a <a href="/pass/">Cruise Pass</a> or your own server.</span></div>
+        </li>
       </ol>
     </section>
 
     <section id="relay">
       <h2>Internet delivery</h2>
-      <p>Your family gets a mailbox on the internet, and it's how one internet purchase covers everyone: when any single family phone gets online — one Wi-Fi package, a port-day café — it carries the whole family's messages to that mailbox and back, including to family at home who aren't on the cruise at all.</p>
-      <p>The mailbox holds sealed envelopes only — it can't read message contents, sender identities, or receipts — and deletes them after delivery or 30 days.</p>
-      <p>Run your own mailbox server on any small VPS, or skip the server admin with <a href="/pass/">Cruise Pass</a> — $9.99 for 30 days, one payment for the whole household, refundable no questions asked.</p>
+      <p>It's how one internet purchase covers everyone: when any single family phone gets online — one Wi-Fi package, a port-day café — it carries the whole family's messages up and back, including to family at home who aren't on the cruise at all.</p>
+      <p>Everything travels as sealed envelopes only — the service can't read message contents, sender identities, or receipts — and they're deleted after delivery or 30 days.</p>
+    </section>
+
+    <section id="pricing">
+      <h2>Free on the ship. One small pass for the internet part.</h2>
+      <div class="plans">
+        <div class="plan">
+          <h3>On the ship</h3>
+          <p class="plan-price">Free <span>· forever</span></p>
+          <ul>
+            <li>Delivery over ship Wi-Fi and Bluetooth</li>
+            <li>Family phones carry messages for each other</li>
+            <li>End-to-end encrypted, no accounts</li>
+            <li>Open source — audit it, or run your own</li>
+          </ul>
+          <p class="fine">The mesh never needs a purchase. <a href="https://github.com/davidmjacobson/cruisemesh">Source on GitHub</a>.</p>
+        </div>
+        <div class="plan featured">
+          <h3>Cruise Pass</h3>
+          <p class="plan-price">$9.99 <span>· 30 days · whole family</span></p>
+          <ul>
+            <li>Reach family at home, from the ship</li>
+            <li>One pass covers all your family's phones</li>
+            <li>Any one phone online carries everyone's messages</li>
+            <li>Refundable, no questions asked</li>
+          </ul>
+          <div class="actions"><a class="button" href="/pass/">Get Cruise Pass</a></div>
+          <p class="fine">One payment, no subscription. Prefer to self-host? The <a href="https://github.com/davidmjacobson/cruisemesh/blob/master/relayd/DEPLOY.md">same server is free</a> to run yourself.</p>
+        </div>
+      </div>
     </section>
 
     <section>
       <h2>Private by design</h2>
-      <ol class="rows">
-        <li><strong>End-to-end encrypted</strong><span>Messages leave your phone as sealed envelopes. Relays and other phones never see plaintext.</span></li>
-        <li><strong>No accounts</strong><span>Identity is a keypair generated on your phone. No email, phone number, or password.</span></li>
-        <li><strong>No tracking</strong><span>No analytics, advertising, or crash-reporting SDKs — in the apps or on this site.</span></li>
+      <ol class="routes">
+        <li>
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="6" y="11" width="12" height="9" rx="2"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/><circle class="fl" cx="12" cy="15.5" r="1.5"/></svg></span>
+          <div><strong>End-to-end encrypted</strong><span>Messages leave your phone as sealed envelopes. Servers and other phones never see plaintext.</span></div>
+        </li>
+        <li>
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="3.5"/><path d="M11.5 12h9M17 12v3.5M20.5 12v2.5"/></svg></span>
+          <div><strong>No accounts</strong><span>Identity is a keypair generated on your phone. No email, phone number, or password.</span></div>
+        </li>
+        <li>
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12c2.5-4.5 13.5-4.5 16 0-2.5 4.5-13.5 4.5-16 0Z"/><circle cx="12" cy="12" r="2"/><path d="M5 19 19 5"/></svg></span>
+          <div><strong>No tracking</strong><span>No analytics, advertising, or crash-reporting SDKs — in the apps or on this site.</span></div>
+        </li>
       </ol>
-      <p style="margin-top:16px">Details in the <a href="/privacy/">privacy policy</a>.</p>
+      <p class="footnote">Details in the <a href="/privacy/">privacy policy</a>.</p>
     </section>
 
     <section>
       <h2>Status</h2>
-      <p>CruiseMesh is open source and in early development. Android (Kotlin) and iOS (SwiftUI) apps share a Rust core; store listings aren't public yet, so build from <a href="https://github.com/davidmjacobson/cruisemesh">source</a> for now.</p>
+      <p>CruiseMesh is open source and in active development. The Android and iOS apps are in release testing; store listings aren't public yet, so build from <a href="https://github.com/davidmjacobson/cruisemesh">source</a> if you want it today.</p>
     </section>
   </main>
   <footer class="site-footer">
-    <div class="shell">CruiseMesh · offline-first family messaging<br><a href="https://github.com/davidmjacobson/cruisemesh">Source</a> · <a href="/pass/">Cruise Pass</a> · <a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a> · <a href="/support/">Support</a></div>
+    <div class="shell">
+      <a class="brand" href="/">
+        <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+          <path fill="#fff" stroke="#0e2747" stroke-width="1.2" stroke-linejoin="round" d="M14 45 4 62l23-8Z"/>
+          <circle cx="32" cy="30" r="26" fill="#0e2747"/>
+          <circle cx="32" cy="30" r="23.5" fill="none" stroke="#fff" stroke-width="5"/>
+          <circle cx="32" cy="30" r="25.4" fill="none" stroke="#0e2747" stroke-width="1.2"/>
+          <path fill="none" stroke="#a9dcee" stroke-width="2.4" stroke-linecap="round" d="M32 14 20 22M32 14l12 8M32 14v14.5M20 22l12 6.5M44 22l-12 6.5M24 38l8-9.5M40 38l-8-9.5"/>
+          <circle cx="32" cy="14" r="3.4" fill="#fff"/>
+          <circle cx="20" cy="22" r="3.4" fill="#fff"/>
+          <circle cx="44" cy="22" r="3.4" fill="#fff"/>
+          <circle cx="32" cy="28.5" r="3.6" fill="#d8f1f8"/>
+          <circle cx="24" cy="38" r="3.4" fill="#59cfe4"/>
+          <circle cx="40" cy="38" r="3.4" fill="#59cfe4"/>
+          <path d="M24.5 40.5 32 35.5l7.5 5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M24 43h16l-3 8.5q-5 2.8-10 0Z" fill="#fff"/>
+          <path d="M14 52q10-5.5 19-1t24-3.5" fill="none" stroke="#3fc9de" stroke-width="4" stroke-linecap="round"/>
+          <path d="M28 57q9 3.5 19-1.5" fill="none" stroke="#2fb3cf" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        CruiseMesh
+      </a><br>
+      Offline-first family messaging.<br>
+      <a href="https://github.com/davidmjacobson/cruisemesh">Source</a> · <a href="/pass/">Cruise Pass</a> · <a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a> · <a href="/support/">Support</a>
+    </div>
   </footer>
 </body>
 </html>

@@ -7,9 +7,11 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "deploy:redirect": "wrangler deploy --config wrangler.redirect.jsonc",
+    "bake-images": "node scripts/bake-images.mjs",
     "check": "node scripts/check.mjs"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "wrangler": "^4.0.0"
   },
   "dependencies": {

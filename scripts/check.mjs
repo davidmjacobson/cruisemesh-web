@@ -72,14 +72,48 @@ if (supportPage.includes("Settings → Internet relay")) {
 for (const requiredText of ["Settings → Cruise Pass", "Connection details", "Test and use"]) {
   if (!supportPage.includes(requiredText)) throw new Error(`Support must include ${requiredText}`);
 }
-for (const requiredText of ["CruiseMesh 1.0.2", "Save and check later", "Show setup QR"]) {
+for (const requiredText of ["Save and check later", "Show setup QR"]) {
   if (!supportPage.includes(requiredText) && !(await readFile("src/email.js", "utf8")).includes(requiredText)) {
     throw new Error(`Public setup instructions must include ${requiredText}`);
   }
 }
 
+// Buyer-facing setup copy has to track the app. CP3 (#156) confined relay
+// wording to the Custom relay section, and the setup-card flow's button is
+// "Test and use" — "Test and save" belongs to Custom relay and sends people
+// looking for a button that is not on their screen. Version gating is gone
+// because every shipped build is now 1.0.2 or later.
+for (const file of ["src/email.js", "src/index.js", "dist/r/index.html"]) {
+  const source = await readFile(file, "utf8");
+  for (const banned of ["1.0.2", "relay host", "relay mailbox", "household"]) {
+    if (source.includes(banned)) throw new Error(`${file} must not use buyer-facing copy "${banned}"`);
+  }
+  if (!source.includes("Test and use")) throw new Error(`${file} must name the app's Test and use button`);
+}
+
+// Paying customers must never be sent to a public issue tracker to get help:
+// support requests carry checkout emails and purchase details.
+for (const page of ["support", "terms", "privacy"]) {
+  const html = await readFile(`dist/${page}/index.html`, "utf8");
+  if (html.includes("github.com/davidmjacobson/cruisemesh/issues")) {
+    throw new Error(`${page} must not route support to the public issue tracker`);
+  }
+  if (!html.includes("mailto:support@cruisemesh.app")) {
+    throw new Error(`${page} must offer support@cruisemesh.app as the contact channel`);
+  }
+}
+
+// The asset router answers HTML navigation requests itself unless the Worker
+// runs first, which silently turns the post-checkout success page into
+// dist/404.html for real browsers while curl and the Stripe webhook (a POST)
+// both still pass. Nothing else catches this.
+const wranglerConfig = await readFile("wrangler.jsonc", "utf8");
+if (!/"run_worker_first"\s*:\s*true/.test(wranglerConfig)) {
+  throw new Error("assets.run_worker_first must be true, or buyers returning from Stripe get the 404 page");
+}
+
 const workerSource = await readFile("src/index.js", "utf8");
-for (const requiredText of ["Open in CruiseMesh", "Test and save", "Copy setup card", "Set up another phone", "Custom relay details"]) {
+for (const requiredText of ["Open in CruiseMesh", "Test and use", "Copy setup card", "Set up another phone", "Custom relay details"]) {
   if (!workerSource.includes(requiredText)) throw new Error(`Purchase success flow must include ${requiredText}`);
 }
 if (!workerSource.includes("renderSVG") || !workerSource.includes("setup-qr")) {
@@ -105,10 +139,19 @@ async function listFiles(directory) {
 const retiredPersonalDomain = ["davidjacobson", "work"].join(".");
 
 for (const file of await listFiles("dist")) {
+  if (file.endsWith(".png")) continue;
   const content = await readFile(file, "utf8");
   if (content.toLowerCase().includes(retiredPersonalDomain)) {
     throw new Error(`${file} must not reference the retired personal domain`);
   }
+  if (file.endsWith(".html") && !content.includes('rel="icon"')) {
+    throw new Error(`${file} must link the site favicon`);
+  }
+}
+
+// Link previews 404 without the baked images; regenerate with `npm run bake-images`.
+for (const image of ["dist/og.png", "dist/apple-touch-icon.png", "dist/icon.svg"]) {
+  await readFile(image);
 }
 
 const redirect = redirectWorker.fetch(new Request("https://cruisemesh.com/f?source=short-domain"));
