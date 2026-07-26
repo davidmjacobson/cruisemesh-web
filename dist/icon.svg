@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    .hull { fill: #14584d; }
+    .links { stroke: #86a89f; stroke-width: 1.6; fill: none; }
+    .node { fill: #17917e; }
+    @media (prefers-color-scheme: dark) {
+      .hull { fill: #bcd6cd; }
+      .links { stroke: #5d7f75; }
+      .node { fill: #3db6a1; }
+    }
+  </style>
+  <path class="links" d="M9.5 15.5 16 8.5l6.5 7Z"/>
+  <path class="hull" d="M5.5 21h21l-3 5.5h-15Z"/>
+  <circle class="node" cx="9.5" cy="15.5" r="2.2"/>
+  <circle class="node" cx="16" cy="8.5" r="2.2"/>
+  <circle class="node" cx="22.5" cy="15.5" r="2.2"/>
+</svg>

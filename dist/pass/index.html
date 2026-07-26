@@ -8,13 +8,27 @@
   <meta property="og:description" content="Cruise Pass lets one family member's internet package carry everyone's encrypted messages — including to family at home. $9.99 for 30 days, refundable no questions asked.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://cruisemesh.app/pass/">
+  <meta property="og:image" content="https://cruisemesh.app/og.png">
   <title>Cruise Pass — CruiseMesh internet delivery</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#fefefd" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#101614" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <header class="site-header">
     <div class="shell">
-      <a class="brand" href="/">CruiseMesh</a>
+      <a class="brand" href="/">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <path class="g-links" d="M9.5 15.5 16 8.5l6.5 7Z"/>
+          <path class="g-hull" d="M5.5 21h21l-3 5.5h-15Z"/>
+          <circle class="g-node" cx="9.5" cy="15.5" r="2"/>
+          <circle class="g-node" cx="16" cy="8.5" r="2"/>
+          <circle class="g-node" cx="22.5" cy="15.5" r="2"/>
+        </svg>
+        CruiseMesh
+      </a>
       <nav>
         <a href="https://github.com/davidmjacobson/cruisemesh">GitHub</a>
         <a href="/support/">Support</a>
@@ -36,26 +50,47 @@
 
     <section>
       <h2>What it's for</h2>
-      <ol class="rows">
-        <li><strong>Reach the people at home</strong><span>Grandparents, the kid who stayed behind, anyone off the ship — messages flow to them through Cruise Pass, without buying internet for every phone on board.</span></li>
-        <li><strong>Port days</strong><span>The group scatters — some ashore, some on the ship. Any phone with any internet keeps the whole family's messages moving.</span></li>
-        <li><strong>When the ship Wi-Fi flakes</strong><span>On-ship delivery over Wi-Fi and Bluetooth is free and needs no pass. Cruise Pass is the internet backstop when direct paths are unavailable.</span></li>
+      <ol class="routes">
+        <li>
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12l8-7 8 7M6.5 10.5V19h11v-8.5"/><rect x="10.5" y="14" width="3" height="5"/></svg></span>
+          <div><strong>Reach the people at home</strong><span>Grandparents, the kid who stayed behind, anyone off the ship — messages flow to them through Cruise Pass, without buying internet for every phone on board.</span></div>
+        </li>
+        <li>
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="2"/><path d="M12 7.5V20M8.5 10h7M5.5 13.5a6.5 6.5 0 0 0 13 0M5.5 13.5 3.5 12M18.5 13.5l2-1.5"/></svg></span>
+          <div><strong>Port days</strong><span>The group scatters — some ashore, some on the ship. Any phone with any internet keeps the whole family's messages moving.</span></div>
+        </li>
+        <li>
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 9.5a11.5 11.5 0 0 1 16 0M7.3 13a7 7 0 0 1 9.4 0"/><circle class="fl" cx="12" cy="16.8" r="1.7"/><path d="M5 20 19 4"/></svg></span>
+          <div><strong>When the ship Wi-Fi flakes</strong><span>On-ship delivery over Wi-Fi and Bluetooth is free and needs no pass. Cruise Pass is the internet backstop when direct paths are unavailable.</span></div>
+        </li>
       </ol>
     </section>
 
     <section>
       <h2>How it works</h2>
-      <ol class="rows">
-        <li><strong>Pay by card</strong><span>Checkout is handled by Stripe. Your card details never reach us.</span></li>
-        <li><strong>Get your setup link</strong><span>Choose Open in CruiseMesh on the purchase result or in your email.</span></li>
-        <li><strong>Review and test</strong><span>CruiseMesh shows the service host, keeps the household secret hidden, and saves only after you confirm.</span></li>
-        <li><strong>Set up each family phone</strong><span>One pass covers the household. Each phone needs the setup link or QR; this does not add contacts or provide internet access.</span></li>
+      <ol class="routes">
+        <li>
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="6" width="17" height="12.5" rx="2"/><path d="M3.5 10.5h17M7 15h4"/></svg></span>
+          <div><strong>Pay by card</strong><span>Checkout is handled by Stripe. Your card details never reach us.</span></div>
+        </li>
+        <li>
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4.5 7.5l7.5 5.5 7.5-5.5"/></svg></span>
+          <div><strong>Get your setup link</strong><span>Choose Open in CruiseMesh on the purchase result or in your email.</span></div>
+        </li>
+        <li>
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5 19 6v5c0 4.5-3 7.9-7 9.5-4-1.6-7-5-7-9.5V6Z"/><path d="M9 11.8l2.1 2.2 4-4.2"/></svg></span>
+          <div><strong>Review and test</strong><span>Choose Review, check the host CruiseMesh shows, then Test and use. The pass is saved only after that check succeeds; your family's secret stays hidden.</span></div>
+        </li>
+        <li>
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4.5" y="4" width="8.5" height="14" rx="2"/><rect x="11" y="7.5" width="8.5" height="13" rx="2"/></svg></span>
+          <div><strong>Set up each family phone</strong><span>One pass covers the family. Each phone needs the setup link or QR; this does not add contacts or provide internet access.</span></div>
+        </li>
       </ol>
     </section>
 
     <section id="sharing">
       <h2>Who your pass is for</h2>
-      <p>A Cruise Pass covers one household or travel party — the phones you set it up on. Keep it to those phones.</p>
+      <p>A Cruise Pass covers one family or travel party — the phones you set it up on. Keep it to those phones.</p>
       <ul class="rows">
         <li><strong>Friends don't need one</strong><span>Anyone can message you on CruiseMesh whether or not they have a pass. Your pass changes how your family's messages travel, not who is allowed to reach you.</span></li>
         <li><strong>Don't post the setup link</strong><span>Anyone who has it can use your family's delivery capacity. Treat it like a door key rather than an invitation — keep it off social media and public group chats.</span></li>
@@ -69,17 +104,17 @@
     </section>
 
     <section>
-      <h2>What the relay can see</h2>
-      <p>The relay stores sealed ciphertext only, for up to 30 days. It cannot read your messages, who sent them, or whether they were read. Details in the <a href="/privacy/">privacy policy</a>.</p>
+      <h2>What we can see</h2>
+      <p>The delivery service stores sealed ciphertext only, for up to 30 days. It cannot read your messages, who sent them, or whether they were read. Details in the <a href="/privacy/">privacy policy</a>.</p>
     </section>
 
     <section>
       <h2>Prefer to self-host?</h2>
-      <p>CruiseMesh is open source, and the same relay runs on any small VPS — see the <a href="https://github.com/davidmjacobson/cruisemesh/blob/master/relayd/DEPLOY.md">deployment guide</a>. Cruise Pass exists for families who'd rather skip the server admin.</p>
+      <p>CruiseMesh is open source, and the same delivery server runs on any small VPS — see the <a href="https://github.com/davidmjacobson/cruisemesh/blob/master/relayd/DEPLOY.md">deployment guide</a>. Cruise Pass exists for families who'd rather skip the server admin.</p>
     </section>
   </main>
   <footer class="site-footer">
-    <div class="shell"><a href="/">Home</a> · <a href="/privacy/">Privacy</a> · <a href="/support/">Support</a></div>
+    <div class="shell"><a href="/">Home</a> · <a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a> · <a href="/support/">Support</a></div>
   </footer>
   <script>
     (() => {

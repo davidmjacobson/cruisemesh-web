@@ -139,10 +139,19 @@ async function listFiles(directory) {
 const retiredPersonalDomain = ["davidjacobson", "work"].join(".");
 
 for (const file of await listFiles("dist")) {
+  if (file.endsWith(".png")) continue;
   const content = await readFile(file, "utf8");
   if (content.toLowerCase().includes(retiredPersonalDomain)) {
     throw new Error(`${file} must not reference the retired personal domain`);
   }
+  if (file.endsWith(".html") && !content.includes('rel="icon"')) {
+    throw new Error(`${file} must link the site favicon`);
+  }
+}
+
+// Link previews 404 without the baked images; regenerate with `npm run bake-images`.
+for (const image of ["dist/og.png", "dist/apple-touch-icon.png", "dist/icon.svg"]) {
+  await readFile(image);
 }
 
 const redirect = redirectWorker.fetch(new Request("https://cruisemesh.com/f?source=short-domain"));
