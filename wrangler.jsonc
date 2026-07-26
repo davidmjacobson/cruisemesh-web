@@ -7,7 +7,15 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    // Without this, `not_found_handling` answers HTML *navigation* requests
+    // itself and never invokes the Worker — so a buyer returning from Stripe
+    // got dist/404.html instead of their pass. It was invisible to curl-style
+    // checks, which lack Sec-Fetch-Mode: navigate and so fall through to the
+    // Worker, and to the webhook, which is a POST. The Worker falls through
+    // to env.ASSETS.fetch() for everything it does not handle, so running it
+    // first is safe and static pages still get `not_found_handling`.
+    "run_worker_first": true
   },
   "observability": {
     "enabled": true

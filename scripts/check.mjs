@@ -103,6 +103,15 @@ for (const page of ["support", "terms", "privacy"]) {
   }
 }
 
+// The asset router answers HTML navigation requests itself unless the Worker
+// runs first, which silently turns the post-checkout success page into
+// dist/404.html for real browsers while curl and the Stripe webhook (a POST)
+// both still pass. Nothing else catches this.
+const wranglerConfig = await readFile("wrangler.jsonc", "utf8");
+if (!/"run_worker_first"\s*:\s*true/.test(wranglerConfig)) {
+  throw new Error("assets.run_worker_first must be true, or buyers returning from Stripe get the 404 page");
+}
+
 const workerSource = await readFile("src/index.js", "utf8");
 for (const requiredText of ["Open in CruiseMesh", "Test and use", "Copy setup card", "Set up another phone", "Custom relay details"]) {
   if (!workerSource.includes(requiredText)) throw new Error(`Purchase success flow must include ${requiredText}`);
