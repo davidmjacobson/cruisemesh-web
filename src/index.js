@@ -84,7 +84,10 @@ async function handleStripeWebhook(request, env) {
   const fulfilWhenPaid =
     event.type === "checkout.session.completed" ||
     event.type === "checkout.session.async_payment_succeeded";
-  if (fulfilWhenPaid && event.data.object.payment_status === "paid") {
+  const paidStatus = event.data.object.payment_status;
+  // "no_payment_required" is a completed $0 checkout via a 100%-off
+  // promotion code (friends-and-family passes) — as final as "paid".
+  if (fulfilWhenPaid && (paidStatus === "paid" || paidStatus === "no_payment_required")) {
     const purchase = await fulfillCheckoutSession(env, event.data.object.id);
     // `purchase` is null when Stripe no longer reports the session as paid
     // (e.g. the event body raced ahead of a void/refund) — nothing to

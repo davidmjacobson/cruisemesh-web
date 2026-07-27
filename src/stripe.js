@@ -45,6 +45,10 @@ export function createCheckoutSession(env, origin) {
   return stripeRequest(env, "POST", "/checkout/sessions", {
     mode: "payment",
     "line_items[0]": { price: env.STRIPE_PRICE_ID, quantity: 1 },
+    // Shows the "Add promotion code" field. Friends-and-family codes are
+    // 100% off, which completes checkout with payment_status
+    // "no_payment_required" -- fulfillment must accept that status too.
+    allow_promotion_codes: true,
     success_url: `${origin}/relay/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/pass/?canceled=1`,
   });
