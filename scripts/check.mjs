@@ -52,6 +52,9 @@ const worker = (await import("../src/index.js")).default;
 if (typeof worker.fetch !== "function") {
   throw new Error("Site worker must export a fetch handler");
 }
+if (typeof worker.scheduled !== "function") {
+  throw new Error("Site worker must export a scheduled handler (uptime + reconciliation crons)");
+}
 const { relaySetupToken } = await import("../src/relay.js");
 const setupToken = relaySetupToken("https://relay.example", "abc123");
 if (!/^CMRELAY1:[A-Za-z0-9_-]+$/.test(setupToken)) {
@@ -117,6 +120,23 @@ for (const page of ["support", "terms", "privacy"]) {
 const wranglerConfig = await readFile("wrangler.jsonc", "utf8");
 if (!/"run_worker_first"\s*:\s*true/.test(wranglerConfig)) {
   throw new Error("assets.run_worker_first must be true, or buyers returning from Stripe get the 404 page");
+}
+
+// The scheduled handler dispatches on the literal cron expression, and every
+// expression it does not recognize falls through to the uptime probe — so a
+// cron string that drifts between wrangler.jsonc and ops.js silently runs
+// the wrong job instead of failing.
+const { UPTIME_CRON, RECONCILE_CRON } = await import("../src/ops.js");
+for (const cron of [UPTIME_CRON, RECONCILE_CRON]) {
+  if (!wranglerConfig.includes(`"${cron}"`)) {
+    throw new Error(`wrangler.jsonc must declare the "${cron}" cron trigger ops.js dispatches on`);
+  }
+}
+// Family tokens are the credential; ops email must only ever carry the same
+// 12-character prefix relay_admin.sh prints.
+const opsSource = await readFile("src/ops.js", "utf8");
+if (!opsSource.includes("tokenPrefix(")) {
+  throw new Error("Ops emails must truncate family tokens via tokenPrefix()");
 }
 
 const workerSource = await readFile("src/index.js", "utf8");
