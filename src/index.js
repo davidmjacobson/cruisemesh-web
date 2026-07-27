@@ -2,6 +2,7 @@ import { createCheckoutSession, verifyStripeSignature } from "./stripe.js";
 import { relaySetupLink } from "./relay.js";
 import { fulfillCheckoutSession } from "./fulfill.js";
 import { escapeHtml, formatExpiry } from "./email.js";
+import { RECONCILE_CRON, runReconciliation, runUptimeCheck } from "./ops.js";
 import { renderSVG } from "uqr";
 
 function json(body, status = 200) {
@@ -202,5 +203,13 @@ export default {
         : page("Something went wrong — CruiseMesh", `<h1>Something went wrong.</h1><p class="lede">Please refresh in a moment, or <a href="/support/">contact support</a>.</p>`);
     }
     return env.ASSETS.fetch(request);
+  },
+
+  // Cron entry point for the ops jobs (wrangler.jsonc `triggers.crons`).
+  // The real work lives in ops.js; dispatch on the cron expression so a
+  // future third schedule stays a one-line change here.
+  async scheduled(controller, env) {
+    if (controller.cron === RECONCILE_CRON) return runReconciliation(env);
+    return runUptimeCheck(env);
   },
 };
