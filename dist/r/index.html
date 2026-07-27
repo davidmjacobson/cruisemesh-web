@@ -52,6 +52,11 @@
           <a class="button secondary" href="/support/">Get help</a>
         </div>
         <div class="notice" id="notice" role="status" aria-live="polite"></div>
+        <div class="setup-qr" id="qr" hidden>
+          <h2>Reading this on a computer?</h2>
+          <div id="qr-svg" aria-label="QR code for this setup link"></div>
+          <p>Point the phone's camera here. The link opens in CruiseMesh on the phone.</p>
+        </div>
       </div>
     </div>
 
@@ -68,7 +73,8 @@
   <footer class="site-footer">
     <div class="shell">The setup card stays after the <code>#</code> in this URL, so it never reaches this website or Cloudflare.</div>
   </footer>
-  <script>
+  <script type="module">
+    import { renderSVG } from "/qr.mjs";
     (() => {
       const raw = location.hash.slice(1);
       const match = raw.match(/CMRELAY1:[A-Za-z0-9_-]+/);
@@ -80,6 +86,15 @@
       document.querySelector("#open").href = location.href;
       document.querySelector("#token").textContent = token;
       document.querySelector("#card-controls").hidden = false;
+      try {
+        // The QR encodes the full link, fragment included, and is drawn
+        // entirely client-side: the card never leaves this page.
+        document.querySelector("#qr-svg").innerHTML = renderSVG(location.href, { ecc: "M", border: 2 });
+        document.querySelector("#qr").hidden = false;
+      } catch {
+        // No QR is a degraded page, not a broken one; the link and copy
+        // buttons above still work.
+      }
       document.querySelector("#copy").addEventListener("click", async () => {
         const notice = document.querySelector("#notice");
         try {

@@ -24,6 +24,13 @@ const relayPage = await readFile("dist/r/index.html", "utf8");
 if (!relayPage.includes("location.hash")) {
   throw new Error("Relay setup page must read the card from the URL fragment");
 }
+// The setup QR is drawn client-side from the vendored uqr module, so a buyer
+// reading the email on a computer can point each phone at the screen without
+// the card ever leaving the page.
+if (!relayPage.includes('from "/qr.mjs"') || !relayPage.includes("setup-qr")) {
+  throw new Error("Relay setup page must render the client-side setup QR");
+}
+await readFile("dist/qr.mjs");
 
 const termsPage = await readFile("dist/terms/index.html", "utf8");
 for (const requiredText of [
