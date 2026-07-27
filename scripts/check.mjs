@@ -119,6 +119,20 @@ for (const requiredText of ["Open in CruiseMesh", "Test and use", "Copy setup ca
 if (!workerSource.includes("renderSVG") || !workerSource.includes("setup-qr")) {
   throw new Error("Purchase success flow must render an in-page second-phone setup QR");
 }
+// Friends-and-family passes redeem a 100%-off promotion code, which
+// completes checkout as "no_payment_required" instead of "paid". If either
+// fulfillment gate stops accepting it, free passes silently show buyers the
+// "Payment not completed" page.
+const stripeSource = await readFile("src/stripe.js", "utf8");
+if (!stripeSource.includes("allow_promotion_codes")) {
+  throw new Error("Checkout must allow promotion codes (friends-and-family passes)");
+}
+for (const file of ["src/fulfill.js", "src/index.js"]) {
+  if (!(await readFile(file, "utf8")).includes("no_payment_required")) {
+    throw new Error(`${file} must accept no_payment_required (100%-off promotion codes)`);
+  }
+}
+
 const emailSource = await readFile("src/email.js", "utf8");
 if (!emailSource.includes("each family phone needs this setup")) {
   throw new Error("Credential email must explain that every family phone needs setup");

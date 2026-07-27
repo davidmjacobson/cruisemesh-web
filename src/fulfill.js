@@ -26,7 +26,10 @@ export async function fulfillCheckoutSession(env, sessionId) {
       if (error.status === 404 || error.stripeCode === "resource_missing") return null;
       throw error;
     }
-    if (session.payment_status !== "paid") return null;
+    // "no_payment_required" is a fully completed $0 checkout: a 100%-off
+    // promotion code (friends-and-family passes). Everything else unpaid is
+    // an unfinished or failed checkout.
+    if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") return null;
     const now = Date.now();
     // ON CONFLICT DO NOTHING: if the webhook and the success page race, only
     // one insert wins and both paths read back the winning token.
