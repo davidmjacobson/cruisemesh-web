@@ -314,6 +314,20 @@ section:first-of-type, .intro { margin-top: 0; padding-top: 0; border-top: 0; }
   white-space: nowrap;
 }
 
+/* Card recovery (a link that lost its fragment) */
+.recover-label { display: block; margin: 22px 0 8px; font-weight: 600; }
+#recover-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--soft);
+  font: 0.9rem ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  resize: vertical;
+}
+#recover-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
 .notice { margin-top: 14px; min-height: 1.4em; color: var(--accent-ink); font-weight: 550; }
 .notice.success { padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .setup-steps { margin: 24px 0 0; padding-left: 24px; }

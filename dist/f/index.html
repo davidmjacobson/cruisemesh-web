@@ -47,10 +47,20 @@
       <div id="card-controls" hidden>
         <div class="token" id="token" aria-label="CruiseMesh friend card"></div>
         <div class="actions">
+          <a class="button" id="open" href="">Open in CruiseMesh</a>
           <button class="button" id="copy" type="button">Copy friend card</button>
           <a class="button secondary" href="/support/">Get help</a>
         </div>
         <div class="notice" id="notice" role="status" aria-live="polite"></div>
+      </div>
+      <div id="recover" hidden>
+        <label class="recover-label" for="recover-input">Paste the message your friend sent you</label>
+        <textarea id="recover-input" rows="3" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+        <div class="actions">
+          <button class="button" id="recover-go" type="button">Find the card</button>
+          <a class="button secondary" href="/support/">Get help</a>
+        </div>
+        <div class="notice" id="recover-notice" role="status" aria-live="polite"></div>
       </div>
     </div>
 
@@ -69,17 +79,49 @@
   </footer>
   <script>
     (() => {
-      const raw = location.hash.slice(1);
-      const match = raw.match(/CMFRIEND1:[A-Za-z0-9_-]+/);
-      if (!match) {
-        document.querySelector("#intro").textContent = "This link does not contain a complete CruiseMesh friend card. Ask your friend to share it again.";
-        return;
+      // Version-agnostic on purpose. The app emits CMFRIEND2 today and this
+      // page matched only CMFRIEND1, so every shared link reported "no card"
+      // while the card sat in the fragment the whole time. This page only
+      // displays a card and hands it to the app, which is the thing that
+      // validates it — so accepting any version fails safe, and a future
+      // CMFRIEND3 will not silently break sharing again.
+      const CARD = /CMFRIEND\d+:[A-Za-z0-9_-]+/;
+
+      function show(token) {
+        document.querySelector("#recover").hidden = true;
+        document.querySelector("#open").href = "https://cruisemesh.app/f#" + token;
+        document.querySelector("#token").textContent = token;
+        document.querySelector("#card-controls").hidden = false;
+        document.querySelector("#intro").textContent = "This friend card should open directly in CruiseMesh when the app is installed.";
       }
-      const token = match[0];
-      document.querySelector("#token").textContent = token;
-      document.querySelector("#card-controls").hidden = false;
+
+      const fromUrl = location.hash.slice(1).match(CARD);
+      if (fromUrl) {
+        show(fromUrl[0]);
+      } else {
+        // Messaging apps sometimes end a link at the "#", which drops the
+        // card. Re-sharing produces the same broken link, so offer a paste
+        // path instead of a dead end. The pasted text is parsed here in the
+        // browser and never sent anywhere.
+        document.querySelector("#intro").textContent = "This link arrived without its friend card. Some messaging apps cut links short. Paste the message your friend sent and CruiseMesh will find the card in it.";
+        document.querySelector("#recover").hidden = false;
+        const input = document.querySelector("#recover-input");
+        const recoverNotice = document.querySelector("#recover-notice");
+        const recover = () => {
+          const found = input.value.match(CARD);
+          if (found) {
+            show(found[0]);
+          } else {
+            recoverNotice.textContent = "No friend card in that text. Copy the whole message, including the long link, and try again.";
+          }
+        };
+        document.querySelector("#recover-go").addEventListener("click", recover);
+        input.addEventListener("paste", () => setTimeout(recover, 0));
+      }
+
       document.querySelector("#copy").addEventListener("click", async () => {
         const notice = document.querySelector("#notice");
+        const token = document.querySelector("#token").textContent;
         try {
           await navigator.clipboard.writeText(token);
           notice.textContent = "Friend card copied. Paste it into CruiseMesh.";

@@ -19,6 +19,21 @@ if (!friendPage.includes("location.hash")) {
 if (friendPage.includes("fetch(")) {
   throw new Error("Friend page must not transmit friend-card fragments");
 }
+// Regression guard. This page matched only CMFRIEND1 while the app had moved
+// to the compact CMFRIEND2 card, so every friend link shared as a link told
+// the recipient it contained no card. The page must stay version-agnostic:
+// it only displays a card and hands it to the app, which validates it.
+const friendCardPattern = friendPage.match(/const CARD = (\/[^/]+\/)/)?.[1];
+if (!friendCardPattern) {
+  throw new Error("Friend page must define a CARD pattern for the friend-card fragment");
+}
+const friendCardRe = new RegExp(friendCardPattern.slice(1, -1));
+for (const version of ["CMFRIEND1", "CMFRIEND2", "CMFRIEND3"]) {
+  const sample = `${version}:abcDEF123_-`;
+  if (friendCardRe.exec(sample)?.[0] !== sample) {
+    throw new Error(`Friend page must accept ${version} cards (it only hands them to the app)`);
+  }
+}
 
 const relayPage = await readFile("dist/r/index.html", "utf8");
 if (!relayPage.includes("location.hash")) {
