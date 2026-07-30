@@ -330,6 +330,18 @@ section:first-of-type, .intro { margin-top: 0; padding-top: 0; border-top: 0; }
 
 .notice { margin-top: 14px; min-height: 1.4em; color: var(--accent-ink); font-weight: 550; }
 .notice.success { padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+/* Pre-launch caveat above the checkout notice: the apps are still in release
+   testing, so a pass bought today has nothing to run on unless the buyer can
+   build from source. Same tinted box as .notice.success so it reads as
+   information rather than an error. */
+.prelaunch {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-ink);
+}
 .setup-steps { margin: 24px 0 0; padding-left: 24px; }
 .setup-steps li { padding: 6px 0 6px 4px; }
 .setup-steps strong, .setup-steps span { display: block; }
