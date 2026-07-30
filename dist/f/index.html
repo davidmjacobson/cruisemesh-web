@@ -77,7 +77,8 @@
   <footer class="site-footer">
     <div class="shell">The friend card stays after the <code>#</code> in this URL, so it never reaches this website or Cloudflare.</div>
   </footer>
-  <script>
+  <script type="module">
+    import { appLink, armOpenButton } from "/open-in-app.mjs";
     (() => {
       // Version-agnostic on purpose. The app emits CMFRIEND2 today and this
       // page matched only CMFRIEND1, so every shared link reported "no card"
@@ -87,9 +88,19 @@
       // CMFRIEND3 will not silently break sharing again.
       const CARD = /CMFRIEND\d+:[A-Za-z0-9_-]+/;
 
+      armOpenButton({
+        button: document.querySelector("#open"),
+        notice: document.querySelector("#notice"),
+        message: "CruiseMesh did not open. On a phone, check that the app is installed and up to date, then try again — or copy the friend card and paste it into Add a friend.",
+      });
+
       function show(token) {
         document.querySelector("#recover").hidden = true;
-        document.querySelector("#open").href = "https://cruisemesh.app/f#" + token;
+        // The app scheme, not an https link back to this same page, which is
+        // inert in Safari by design. See /open-in-app.mjs. `show` can run
+        // twice (URL, then the paste-recovery path), so only the href is set
+        // here — the button is armed once, above.
+        document.querySelector("#open").href = appLink("f", token);
         document.querySelector("#token").textContent = token;
         document.querySelector("#card-controls").hidden = false;
         document.querySelector("#intro").textContent = "This friend card should open directly in CruiseMesh when the app is installed.";

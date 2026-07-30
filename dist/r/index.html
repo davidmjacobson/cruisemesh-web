@@ -75,6 +75,7 @@
   </footer>
   <script type="module">
     import { renderSVG } from "/qr.mjs";
+    import { appLink, armOpenButton } from "/open-in-app.mjs";
     (() => {
       const raw = location.hash.slice(1);
       const match = raw.match(/CMRELAY1:[A-Za-z0-9_-]+/);
@@ -83,12 +84,22 @@
         return;
       }
       const token = match[0];
-      document.querySelector("#open").href = location.href;
+      // The app scheme, not this page's own https URL: a same-domain link is
+      // inert in Safari by design. See /open-in-app.mjs.
+      document.querySelector("#open").href = appLink("r", token);
+      armOpenButton({
+        button: document.querySelector("#open"),
+        notice: document.querySelector("#notice"),
+        message: "CruiseMesh did not open. On a phone, check that the app is installed and up to date, then try again — or copy the setup card and paste it in Settings → Cruise Pass.",
+      });
       document.querySelector("#token").textContent = token;
       document.querySelector("#card-controls").hidden = false;
       try {
-        // The QR encodes the full link, fragment included, and is drawn
-        // entirely client-side: the card never leaves this page.
+        // The QR encodes the full https link, fragment included, and is drawn
+        // entirely client-side: the card never leaves this page. It stays
+        // https on purpose — it is scanned by a camera on another phone, where
+        // the Universal Link fires normally and a phone without the app still
+        // lands on this page instead of an error.
         document.querySelector("#qr-svg").innerHTML = renderSVG(location.href, { ecc: "M", border: 2 });
         document.querySelector("#qr").hidden = false;
       } catch {
