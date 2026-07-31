@@ -47,6 +47,24 @@ if (!relayPage.includes('from "/qr.mjs"') || !relayPage.includes("setup-qr")) {
 }
 await readFile("dist/qr.mjs");
 
+// Regression guard. Both "Open in CruiseMesh" buttons pointed at this site's
+// own https URL, and iOS does not fire a Universal Link for a same-domain
+// navigation — so the button was inert in Safari by design, and Chrome
+// declined it for the same reason. The buttons must address the app over the
+// cruisemesh:// scheme, which fires regardless of the page's origin.
+await readFile("dist/open-in-app.mjs");
+for (const [name, page, route] of [
+  ["Friend", friendPage, "f"],
+  ["Relay setup", relayPage, "r"],
+]) {
+  if (!page.includes('from "/open-in-app.mjs"') || !page.includes(`appLink("${route}"`)) {
+    throw new Error(`${name} page must open the app with appLink("${route}", …) from /open-in-app.mjs`);
+  }
+  if (/#open"\)\s*\.href\s*=\s*(location\.href|"https)/.test(page)) {
+    throw new Error(`${name} page must not point "Open in CruiseMesh" at an https link on this same site`);
+  }
+}
+
 const termsPage = await readFile("dist/terms/index.html", "utf8");
 for (const requiredText of [
   "Terms version:",
