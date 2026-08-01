@@ -1,3 +1,12 @@
+# Every rule that matches a request contributes its headers, so anything set
+# in /* must not be repeated below — a header named twice is sent twice, and
+# /f and /r were shipping two conflicting Referrer-Policy values that way. The
+# strict values therefore live in /* and apply site-wide; the specific blocks
+# below only carry what is genuinely unique to them.
+#
+# These do not reach anything the Worker renders itself (the purchase success
+# page); src/index.js sets the same set there.
+
 /.well-known/assetlinks.json
   Content-Type: application/json; charset=utf-8
   Cache-Control: public, max-age=3600
@@ -8,18 +17,14 @@
 
 /f/*
   Cache-Control: public, max-age=300
-  Referrer-Policy: no-referrer
-  X-Content-Type-Options: nosniff
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'
 
 /r/*
   Cache-Control: public, max-age=300
-  Referrer-Policy: no-referrer
-  X-Content-Type-Options: nosniff
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'
 
 /*
+  Strict-Transport-Security: max-age=31536000
+  Referrer-Policy: no-referrer
   X-Content-Type-Options: nosniff
-  Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
-
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'

@@ -1,6 +1,6 @@
-// Client for the relayd admin API (Phase 1 of monetize-plan.md, lives in
-// ../cruisemesh/relayd). Until that ships, provisioning fails and purchases
-// stay in the "activation pending" state; webhook retries pick them up.
+// Client for the relayd admin API (../cruisemesh/relayd). If the relay is
+// unreachable, provisioning fails and purchases stay in the "activation
+// pending" state; webhook retries pick them up.
 
 export const PLAN = { id: "cruise-pass-30d", days: 30 };
 

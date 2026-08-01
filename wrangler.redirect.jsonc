@@ -4,9 +4,26 @@
   "main": "./src/redirect.js",
   "compatibility_date": "2026-07-13",
   "compatibility_flags": ["nodejs_compat"],
+  // Every hostname that is not the canonical one, 308ed to cruisemesh.app with
+  // the path and query intact (browsers carry the fragment across a redirect
+  // themselves, so friend and setup cards survive the hop).
+  //
+  // `custom_domain: true` is what creates the DNS record and certificate, so a
+  // hostname listed here needs no separate dashboard step — but it does need
+  // `npm run deploy:redirect`, a different deploy from the site's. Both www
+  // forms were simply absent from DNS until this was added, so anyone who
+  // typed one got a browser error instead of the site.
   "routes": [
     {
       "pattern": "cruisemesh.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.cruisemesh.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.cruisemesh.app",
       "custom_domain": true
     }
   ]

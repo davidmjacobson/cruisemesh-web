@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The public pages only. The card pages (/f, /r) and the purchase success
+     page are noindex and Disallowed in robots.txt, so they are absent here on
+     purpose. Keep this list in step with dist/: scripts/check.mjs enforces it. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://cruisemesh.app/</loc><priority>1.0</priority></url>
+  <url><loc>https://cruisemesh.app/pass/</loc><priority>0.9</priority></url>
+  <url><loc>https://cruisemesh.app/support/</loc><priority>0.5</priority></url>
+  <url><loc>https://cruisemesh.app/privacy/</loc><priority>0.3</priority></url>
+  <url><loc>https://cruisemesh.app/terms/</loc><priority>0.3</priority></url>
+</urlset>

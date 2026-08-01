@@ -65,6 +65,17 @@ for (const [name, page, route] of [
   }
 }
 
+// A pass expires 30 days after *purchase* (src/fulfill.js), not after first
+// use and not after sailing. Someone who buys three weeks before the cruise
+// loses most of the trip, and the page used to say only "30 days" — so the
+// clock's starting point has to stay on the page that takes the money.
+const passPage = await readFile("dist/pass/index.html", "utf8");
+for (const requiredText of ["30 days from purchase", "start the moment you buy"]) {
+  if (!passPage.includes(requiredText)) {
+    throw new Error(`Pass page must say when the 30 days start ("${requiredText}")`);
+  }
+}
+
 const termsPage = await readFile("dist/terms/index.html", "utf8");
 for (const requiredText of [
   "Terms version:",
@@ -165,6 +176,53 @@ for (const cron of [UPTIME_CRON, RECONCILE_CRON]) {
     throw new Error(`wrangler.jsonc must declare the "${cron}" cron trigger ops.js dispatches on`);
   }
 }
+// Cloudflare applies *every* _headers rule that matches a request, so a header
+// named in both /* and a path-specific block is sent twice — which is how /f
+// and /r came to answer with two conflicting Referrer-Policy values. The
+// site-wide values therefore live in /* alone.
+const headersFile = await readFile("dist/_headers", "utf8");
+const headerRules = new Map();
+let currentRule = null;
+for (const line of headersFile.split("\n")) {
+  if (!line.trim() || line.trim().startsWith("#")) continue;
+  if (!/^\s/.test(line)) {
+    currentRule = line.trim();
+    headerRules.set(currentRule, []);
+  } else if (currentRule) {
+    headerRules.get(currentRule).push(line.slice(0, line.indexOf(":")).trim().toLowerCase());
+  }
+}
+const globalHeaders = headerRules.get("/*") ?? [];
+for (const required of ["strict-transport-security", "content-security-policy", "referrer-policy", "x-content-type-options"]) {
+  if (!globalHeaders.includes(required)) {
+    throw new Error(`dist/_headers must set ${required} on /* so every page gets it`);
+  }
+}
+for (const [rule, names] of headerRules) {
+  if (rule === "/*") continue;
+  for (const name of names) {
+    if (globalHeaders.includes(name)) {
+      throw new Error(`dist/_headers sets ${name} in both /* and ${rule}; both rules apply, so it is sent twice`);
+    }
+  }
+}
+
+// The only robots.txt ever served was Cloudflare's Content Signals preamble:
+// comments announcing that access is conditional on signals, followed by no
+// signals and no directives at all.
+const robots = await readFile("dist/robots.txt", "utf8");
+if (!robots.includes("Content-Signal:") || !/^User-Agent:/m.test(robots)) {
+  throw new Error("robots.txt must carry real directives, not just the Content Signals preamble");
+}
+if (!robots.includes("Sitemap: https://cruisemesh.app/sitemap.xml")) {
+  throw new Error("robots.txt must point at the sitemap");
+}
+for (const private_ of ["/f/", "/r/", "/relay/"]) {
+  if (!robots.includes(`Disallow: ${private_}`)) {
+    throw new Error(`robots.txt must keep crawlers off ${private_}`);
+  }
+}
+
 // Family tokens are the credential; ops email must only ever carry the same
 // 12-character prefix relay_admin.sh prints.
 const opsSource = await readFile("src/ops.js", "utf8");
@@ -178,6 +236,31 @@ for (const requiredText of ["Open in CruiseMesh", "Test and use", "Copy setup ca
 }
 if (!workerSource.includes("renderSVG") || !workerSource.includes("setup-qr")) {
   throw new Error("Purchase success flow must render an in-page second-phone setup QR");
+}
+// Same trap the /f and /r pages fell into, one page later: the success page is
+// itself served from cruisemesh.app, so an https link to /r is a same-domain
+// navigation, and iOS does not fire a Universal Link for one. That made the
+// first tap after paying — the highest-stakes tap in the funnel — inert. The
+// QR and the credential email stay https on purpose; they are read
+// cross-origin, where the Universal Link fires normally.
+if (!workerSource.includes("cruisemesh://r#")) {
+  throw new Error("Purchase success page must open the app over cruisemesh://, not an https link to this same site");
+}
+if (/id="open-in-app"[^>]*setupLink/.test(workerSource)) {
+  throw new Error("Purchase success page must not point its open button at the https setup link");
+}
+if (!workerSource.includes("armOpenButton")) {
+  throw new Error("Purchase success page must arm the did-it-open fallback from /open-in-app.mjs");
+}
+// Cloudflare answers this Worker on http:// too, and the "Always Use HTTPS"
+// toggle is not in this repo. /r renders a family relay token to an audience
+// on ship and hotel Wi-Fi, so the upgrade has to be in code where it is
+// reviewable — and it did not exist at all until 2026-08-01.
+if (!workerSource.includes('url.protocol === "http:"')) {
+  throw new Error("Worker must redirect http:// to https:// (the site answered plaintext http with 200)");
+}
+if (!workerSource.includes("strict-transport-security")) {
+  throw new Error("Worker-rendered pages must carry the security headers dist/_headers cannot reach");
 }
 // Friends-and-family passes redeem a 100%-off promotion code, which
 // completes checkout as "no_payment_required" instead of "paid". If either
@@ -223,6 +306,24 @@ for (const file of await listFiles("dist")) {
   }
 }
 
+// Every page meant to be found must be in the sitemap, and nothing else may
+// be: the card pages and the purchase success page are noindex and Disallowed,
+// and a crawler holding one of those URLs is the failure this guards against.
+const sitemap = await readFile("dist/sitemap.xml", "utf8");
+for (const file of await listFiles("dist")) {
+  const path = file.replaceAll("\\", "/");
+  if (!path.endsWith(".html") || path.endsWith("/404.html")) continue;
+  const content = await readFile(file, "utf8");
+  const location = `https://cruisemesh.app${path.replace(/^dist/, "").replace(/index\.html$/, "")}`;
+  const indexable = !content.includes('content="noindex');
+  if (indexable && !sitemap.includes(`<loc>${location}</loc>`)) {
+    throw new Error(`${file} is indexable but missing from dist/sitemap.xml (${location})`);
+  }
+  if (!indexable && sitemap.includes(`<loc>${location}</loc>`)) {
+    throw new Error(`${file} is noindex but listed in dist/sitemap.xml (${location})`);
+  }
+}
+
 // Link previews 404 without the baked images; regenerate with `npm run bake-images`.
 for (const image of ["dist/og.png", "dist/apple-touch-icon.png", "dist/icon.svg"]) {
   await readFile(image);
@@ -234,6 +335,15 @@ if (redirect.status !== 308) {
 }
 if (redirect.headers.get("Location") !== "https://cruisemesh.app/f?source=short-domain") {
   throw new Error("Short domain must preserve the request path and query string");
+}
+// A hostname absent from here has no DNS record at all — `custom_domain: true`
+// is what creates it. Both www forms were missing, so anyone who typed one got
+// a browser error rather than the site.
+const redirectConfig = await readFile("wrangler.redirect.jsonc", "utf8");
+for (const hostname of ["cruisemesh.com", "www.cruisemesh.com", "www.cruisemesh.app"]) {
+  if (!redirectConfig.includes(`"${hostname}"`)) {
+    throw new Error(`${hostname} must be a custom domain on the redirect Worker, or it does not resolve`);
+  }
 }
 
 console.log("Static site checks passed.");

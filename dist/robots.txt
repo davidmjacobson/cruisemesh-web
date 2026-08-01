@@ -1,0 +1,22 @@
+# Until this file existed, the only robots.txt served was Cloudflare's Content
+# Signals preamble: twenty-odd lines of comments announcing that access is
+# conditional on signals, followed by no signals and no directives at all.
+#
+# The call made here:
+#   search=yes    being findable is the entire job of this site.
+#   ai-input=yes  someone asking an assistant how to text family on a cruise
+#                 is a real way to discover CruiseMesh, and that answer is
+#                 better if it can read the actual pages.
+#   ai-train=no   no reason to hand over the corpus; nothing is gained back.
+User-Agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+Allow: /
+
+# Per-family card pages. Both are already noindex, both are meaningless
+# without the fragment a crawler never receives, and nothing good comes of one
+# being held in an index. /relay/ is the post-purchase success page.
+Disallow: /f/
+Disallow: /r/
+Disallow: /relay/
+
+Sitemap: https://cruisemesh.app/sitemap.xml
