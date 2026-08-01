@@ -5,10 +5,24 @@ import { escapeHtml, formatExpiry } from "./email.js";
 import { RECONCILE_CRON, runReconciliation, runUptimeCheck } from "./ops.js";
 import { renderSVG } from "uqr";
 
+// dist/_headers covers the static pages, but it does not apply to anything
+// this Worker renders itself — including the success page, whose URL carries
+// the Stripe session id. Same policy as the /f and /r card pages: inline
+// scripts are allowed because both pages ship one, nothing is loaded
+// cross-origin, and no-referrer keeps the session id out of outbound headers.
+const SECURITY_HEADERS = {
+  "strict-transport-security": "max-age=31536000",
+  "referrer-policy": "no-referrer",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "content-security-policy":
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+};
+
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json" },
+    headers: { ...SECURITY_HEADERS, "content-type": "application/json" },
   });
 }
 
@@ -61,7 +75,13 @@ function page(title, body) {
   </footer>
 </body>
 </html>`,
-    { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
+    {
+      headers: {
+        ...SECURITY_HEADERS,
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+      },
+    },
   );
 }
 
@@ -103,7 +123,12 @@ async function handleStripeWebhook(request, env) {
 async function handleSuccess(request, env) {
   const url = new URL(request.url);
   const sessionId = url.searchParams.get("session_id");
-  if (!sessionId) return Response.redirect(`${url.origin}/pass/`, 302);
+  if (!sessionId) {
+    return new Response(null, {
+      status: 302,
+      headers: { ...SECURITY_HEADERS, location: `${url.origin}/pass/` },
+    });
+  }
 
   const purchase = await fulfillCheckoutSession(env, sessionId);
   if (!purchase) {
@@ -118,6 +143,13 @@ async function handleSuccess(request, env) {
 
   const setupLink = relaySetupLink(url.origin, purchase.relay_url, purchase.family_token);
   const setupCard = setupLink.slice(setupLink.indexOf("#") + 1);
+  // This page is served from cruisemesh.app, and iOS does not fire a Universal
+  // Link for a same-domain navigation — so an https link to /r here is inert in
+  // Safari, and Chrome declines it too. Mirrors what dist/open-in-app.mjs does
+  // for the on-page buttons on /f and /r; check.mjs keeps the two in step. The
+  // QR and the credential email keep the https form on purpose: those are read
+  // cross-origin, where the Universal Link fires normally.
+  const appSetupLink = `cruisemesh://r#${setupCard}`;
   const setupQr = renderSVG(setupLink, { ecc: "M", border: 4 });
   const emailedNote = purchase.email_sent_ms
     ? `<p>We also emailed everything to <strong>${escapeHtml(purchase.email)}</strong>.</p>`
@@ -133,7 +165,8 @@ async function handleSuccess(request, env) {
      <h1>Your Cruise Pass is ready.</h1>
      <p class="lede">Finish setup on a phone with CruiseMesh installed. The app shows the host, tests the connection, and saves it only after you confirm.</p>
      ${pendingNote}
-     <div class="actions"><a class="button" href="${escapeHtml(setupLink)}">Open in CruiseMesh</a></div>
+     <div class="actions"><a class="button" id="open-in-app" href="${escapeHtml(appSetupLink)}">Open in CruiseMesh</a></div>
+     <div class="notice" id="open-notice" role="status" aria-live="polite"></div>
      <ol class="setup-steps">
        <li><strong>Open CruiseMesh</strong><span>Tap the button above on the phone you want to set up.</span></li>
        <li><strong>Review</strong><span>Check the host CruiseMesh shows. Your family's token stays hidden.</span></li>
@@ -185,6 +218,14 @@ async function handleSuccess(request, env) {
            }
          });
        })();
+     </script>
+     <script type="module">
+       import { armOpenButton } from "/open-in-app.mjs";
+       armOpenButton({
+         button: document.querySelector("#open-in-app"),
+         notice: document.querySelector("#open-notice"),
+         message: "CruiseMesh did not open. Check that the app is installed on this phone and up to date, then try again, or copy the setup card below and paste it in Settings → Cruise Pass. Reading this on a computer? Scan the QR code with the phone instead.",
+       });
      </script>`,
   );
 }
@@ -192,6 +233,20 @@ async function handleSuccess(request, env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    // Cloudflare answers this Worker on http:// as well as https://, and the
+    // "Always Use HTTPS" toggle lives in a dashboard rather than in this repo,
+    // so the upgrade is done here where it is reviewable. It matters more here
+    // than on most sites: /r renders a family relay token, and the audience is
+    // on ship, port, and hotel Wi-Fi — the networks an attacker owns. The ACME
+    // path is exempt so an HTTP-01 challenge is never redirected away from a
+    // certificate renewal.
+    // `wrangler dev` serves plain http on localhost, so exempting it is what
+    // keeps this from redirecting local development into a dead https port.
+    const local = url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]";
+    if (url.protocol === "http:" && !local && !url.pathname.startsWith("/.well-known/acme-challenge/")) {
+      url.protocol = "https:";
+      return new Response(null, { status: 301, headers: { location: url.toString() } });
+    }
     try {
       if (url.pathname === "/api/checkout" && request.method === "POST") return await handleCheckout(request, env);
       if (url.pathname === "/api/stripe/webhook" && request.method === "POST") return await handleStripeWebhook(request, env);

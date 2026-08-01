@@ -7,7 +7,13 @@ export default {
 
     return new Response(null, {
       status: 308,
-      headers: { Location: destination.toString() },
+      headers: {
+        Location: destination.toString(),
+        // Pin the alias hostnames to https too, so the one hop through here
+        // cannot be the plaintext link in the chain.
+        "Strict-Transport-Security": "max-age=31536000",
+        "Referrer-Policy": "no-referrer",
+      },
     });
   },
 };

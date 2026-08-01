@@ -10,9 +10,8 @@ do not send to Cloudflare.
 
 A small Worker (`src/index.js`) additionally powers the **Cruise Pass**
 hosted-relay purchase flow: Stripe Checkout, the Stripe webhook, relay
-provisioning, and credential delivery. See [monetize-plan.md](monetize-plan.md)
-for the full design and the "Cruise Pass setup" section below for the
-one-time launch checklist.
+provisioning, and credential delivery. It is live and taking real payments;
+the "Cruise Pass" section below is the operator's reference for it.
 
 ## Local development
 
@@ -34,37 +33,45 @@ npm run deploy
 The custom domain is declared in `wrangler.jsonc`; Cloudflare manages its DNS
 record and TLS certificate.
 
-## Cruise Pass setup (one-time launch checklist)
+## Cruise Pass
 
-The purchase flow ships in this repo but needs these steps before it can take
-real payments. Until they are done, the static site and `npm run deploy` keep
-working — the `/api/` endpoints just return errors.
+The purchase flow is live. What follows is what each piece is and how to
+re-establish it — on a new account, or when a credential has to be rotated.
+The static site and `npm run deploy` keep working regardless; without these,
+the `/api/` endpoints simply return errors.
 
-1. **D1 database** — already created (`cruisemesh-web`, id in `wrangler.jsonc`).
-   Apply the schema:
+1. **D1 database** — `cruisemesh-web`, id in `wrangler.jsonc`. To apply the
+   schema (migrations are idempotent):
 
    ```sh
    npx wrangler d1 migrations apply cruisemesh-web --remote
    ```
 
-2. **Stripe** — create a product ("Cruise Pass") with a one-time price in the
-   [Stripe dashboard](https://dashboard.stripe.com), put its `price_...` id in
-   `wrangler.jsonc` under `vars.STRIPE_PRICE_ID`, then:
+2. **Stripe** — a product ("Cruise Pass") with a one-time price, whose
+   `price_...` id lives in `wrangler.jsonc` under `vars.STRIPE_PRICE_ID`. The
+   price id and the secret key must be swapped in the same breath: a live key
+   with a test price, or the reverse, fails checkout with "no such price".
 
    ```sh
    npx wrangler secret put STRIPE_SECRET_KEY
    ```
 
-3. **Stripe webhook** — in the dashboard add an endpoint for
+3. **Stripe webhook** — an endpoint for
    `https://cruisemesh.app/api/stripe/webhook` subscribed to
-   `checkout.session.completed`, and store its signing secret:
+   `checkout.session.completed` and `checkout.session.async_payment_succeeded`
+   (`src/index.js` handles both), and its signing secret:
 
    ```sh
    npx wrangler secret put STRIPE_WEBHOOK_SECRET
    ```
 
-4. **Relay admin API** — deploy the relayd families-table/admin-API work
-   (Phase 1 in `monetize-plan.md`, lives in the main cruisemesh repo), then:
+   The webhook is what fulfills a buyer who closes the tab at Stripe instead of
+   returning to the success page. Both paths call the same idempotent
+   `fulfillCheckoutSession`, so either one alone completes a purchase — but
+   only the webhook covers the buyer who never comes back.
+
+4. **Relay admin API** — the families-table admin API in the main cruisemesh
+   repo (`relayd`, see its `DEPLOY.md`) must be deployed and reachable, then:
 
    ```sh
    npx wrangler secret put RELAY_ADMIN_TOKEN
@@ -73,11 +80,14 @@ working — the `/api/` endpoints just return errors.
    Until this exists, paid purchases show "activation pending" and Stripe
    retries the webhook until provisioning succeeds.
 
-5. **Email** — credential emails go out through [Resend](https://resend.com).
-   Add `cruisemesh.app` as a domain there and apply the DKIM records it gives
-   you; merge its SPF `include:` into the domain's **existing single** SPF TXT
-   record rather than adding a second one (two SPF records are an RFC 7208
-   permerror and quietly wreck deliverability). Then:
+5. **Email** — credential emails go out through [Resend](https://resend.com)
+   with `cruisemesh.app` verified as a sending domain: DKIM at
+   `resend._domainkey`, and the Return-Path on the `send.cruisemesh.app`
+   subdomain with its own `include:amazonses.com` SPF record. Keeping the
+   envelope sender on that subdomain is what leaves the apex SPF record free
+   for Cloudflare Email Routing — never add a second SPF TXT record to the
+   apex, because two are an RFC 7208 permerror that quietly wrecks
+   deliverability. Then:
 
    ```sh
    npx wrangler secret put RESEND_API_KEY
@@ -88,8 +98,11 @@ working — the `/api/` endpoints just return errors.
    only. Inbound mail (`abuse@`, `support@`) stays on Cloudflare Email
    Routing; only sending moved.
 
-6. Deploy (`npm run deploy`) and run a test purchase with a Stripe test key
-   before switching the secrets to live keys.
+6. Deploy the site with `npm run deploy`. The alias hostnames
+   (`cruisemesh.com`, both `www.` forms) are a separate Worker with its own
+   deploy, `npm run deploy:redirect`; a hostname added to
+   `wrangler.redirect.jsonc` gets its DNS record and certificate from that
+   deploy and needs no dashboard step.
 
 ## Association identifiers
 
