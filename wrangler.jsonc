@@ -15,7 +15,17 @@
     // Worker, and to the webhook, which is a POST. The Worker falls through
     // to env.ASSETS.fetch() for everything it does not handle, so running it
     // first is safe and static pages still get `not_found_handling`.
-    "run_worker_first": true
+    //
+    // The mp4 is the one exception. A response the Worker proxies out of
+    // env.ASSETS.fetch() loses byte-range support: no Accept-Ranges, and a
+    // `Range:` request comes back 200 with the whole 7.6 MB. That breaks
+    // seeking everywhere, and iOS Safari refuses to play media at all unless
+    // the server answers 206 — which would have taken the explainer video
+    // dark on a large share of the phones this site is aimed at. Listing it
+    // as a negative rule hands that one path to the Asset Worker, which
+    // serves ranges natively. Everything else still runs Worker-first, so
+    // the http->https upgrade and the /relay/success fix are unaffected.
+    "run_worker_first": ["/*", "!/cruisemesh-explainer.mp4"]
   },
   "observability": {
     "enabled": true

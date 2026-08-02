@@ -162,9 +162,26 @@ for (const page of ["support", "terms", "privacy"]) {
 // runs first, which silently turns the post-checkout success page into
 // dist/404.html for real browsers while curl and the Stripe webhook (a POST)
 // both still pass. Nothing else catches this.
+// It is now a rule list rather than `true`, because the mp4 has to reach the
+// Asset Worker to get byte-range support. That is a narrow, deliberate hole:
+// anything else added to the exclusion list would take the Worker off a path
+// it is load-bearing for, so the allowed exclusions are named here.
 const wranglerConfig = await readFile("wrangler.jsonc", "utf8");
-if (!/"run_worker_first"\s*:\s*true/.test(wranglerConfig)) {
-  throw new Error("assets.run_worker_first must be true, or buyers returning from Stripe get the 404 page");
+const workerFirst = /"run_worker_first"\s*:\s*(true|\[[^\]]*\])/.exec(wranglerConfig);
+if (!workerFirst) {
+  throw new Error("assets.run_worker_first is missing; buyers returning from Stripe would get the 404 page");
+}
+if (workerFirst[1] !== "true") {
+  const rules = [...workerFirst[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  if (!rules.includes("/*")) {
+    throw new Error('assets.run_worker_first must still match "/*", or /relay/success stops reaching the Worker');
+  }
+  const allowed = new Set(["!/cruisemesh-explainer.mp4"]);
+  for (const rule of rules.filter((r) => r.startsWith("!"))) {
+    if (!allowed.has(rule)) {
+      throw new Error(`assets.run_worker_first excludes ${rule} from the Worker; add it here deliberately or drop it`);
+    }
+  }
 }
 
 // The scheduled handler dispatches on the literal cron expression, and every
