@@ -7,9 +7,11 @@ import { renderSVG } from "uqr";
 
 // dist/_headers covers the static pages, but it does not apply to anything
 // this Worker renders itself — including the success page, whose URL carries
-// the Stripe session id. Same policy as the /f and /r card pages: inline
-// scripts are allowed because both pages ship one, nothing is loaded
-// cross-origin, and no-referrer keeps the session id out of outbound headers.
+// the Stripe session id. Inline scripts are allowed because these pages ship
+// one, nothing is loaded cross-origin, and no-referrer keeps the session id
+// out of outbound headers. Deliberately one directive tighter than the static
+// policy, which also grants media-src for the home page's explainer video:
+// nothing the Worker renders embeds media.
 const SECURITY_HEADERS = {
   "strict-transport-security": "max-age=31536000",
   "referrer-policy": "no-referrer",

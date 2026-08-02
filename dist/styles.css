@@ -199,6 +199,37 @@ section:first-of-type, .intro { margin-top: 0; padding-top: 0; border-top: 0; }
 }
 .art-caption { margin: 10px 2px 0; font-size: 0.88rem; color: var(--muted); }
 
+/* Explainer video. Same frame as .hero-art so the two pages match. The
+   aspect-ratio + width/height on the element itself reserve the box before
+   the poster loads, so the page below does not jump. */
+.hero-video {
+  margin: 30px 0 4px;
+}
+.hero-video video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--art-sky-lo);
+}
+.hero-video figcaption {
+  margin: 10px 2px 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.transcript {
+  margin: 14px 0 4px;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+.transcript summary {
+  cursor: pointer;
+  color: var(--accent-ink);
+}
+.transcript p { margin: 10px 0 0; }
+
 /* Buttons */
 .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 26px 0 8px; }
 .button {

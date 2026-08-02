@@ -1,4 +1,5 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import redirectWorker from "../src/redirect.js";
 
@@ -205,6 +206,34 @@ for (const [rule, names] of headerRules) {
       throw new Error(`dist/_headers sets ${name} in both /* and ${rule}; both rules apply, so it is sent twice`);
     }
   }
+}
+
+// The explainer video. A <video> whose source 404s fails silently — the poster
+// sits there and the play button does nothing — so assert every referenced file
+// exists. media-src is its own directive: without it the video is blocked by
+// default-src even though the file is right there, and only the browser console
+// says so.
+const home = await readFile("dist/index.html", "utf8");
+for (const asset of ["/cruisemesh-explainer.mp4", "/explainer-poster.jpg", "/explainer-captions.vtt"]) {
+  if (!home.includes(asset)) {
+    throw new Error(`dist/index.html no longer references ${asset}`);
+  }
+  if (!existsSync(`dist${asset}`)) {
+    throw new Error(`dist/index.html references ${asset}, which does not exist`);
+  }
+}
+if (!headersFile.includes("media-src 'self'")) {
+  throw new Error("dist/_headers CSP must grant media-src 'self' or the explainer video is blocked");
+}
+// Cloudflare's asset upload rejects anything over 25 MiB.
+const videoBytes = (await stat("dist/cruisemesh-explainer.mp4")).size;
+if (videoBytes > 25 * 1024 * 1024) {
+  throw new Error(`dist/cruisemesh-explainer.mp4 is ${(videoBytes / 1024 / 1024).toFixed(1)} MiB; Cloudflare rejects assets over 25 MiB`);
+}
+// A .vtt without this first line is discarded outright by every browser.
+const captions = await readFile("dist/explainer-captions.vtt", "utf8");
+if (!captions.startsWith("WEBVTT")) {
+  throw new Error("dist/explainer-captions.vtt must begin with the WEBVTT signature");
 }
 
 // The only robots.txt ever served was Cloudflare's Content Signals preamble:

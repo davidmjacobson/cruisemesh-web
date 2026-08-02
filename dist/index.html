@@ -55,53 +55,26 @@
         <a class="button" href="#how">See how it works</a>
         <a class="button secondary" href="/pass/">Cruise Pass · $9.99</a>
       </div>
-      <figure class="hero-art" role="img" aria-label="Illustration: phones on a cruise ship pass messages to each other directly, and one phone with internet access relays everyone's messages to a house on shore.">
-        <svg class="scene" viewBox="0 0 720 300" aria-hidden="true">
-          <circle class="sun" cx="92" cy="64" r="20"/>
-          <path class="ln" d="M158 76q6-7 12 0M178 66q5-6 10 0" opacity="0.6"/>
-          <circle class="paper" cx="470" cy="84" r="17"/>
-          <circle class="ln" cx="470" cy="84" r="17" fill="none"/>
-          <path class="ln" d="M470 67a8.5 17 0 0 0 0 34a8.5 17 0 0 0 0-34M453 84h34"/>
-          <path class="hull" d="M132 196h190l-20 42H152Z"/>
-          <rect class="hull2" x="160" y="168" width="136" height="28" rx="3"/>
-          <rect class="hull" x="182" y="146" width="84" height="22" rx="3"/>
-          <path class="hull" d="M272 168l4-20h14l4 20Z"/>
-          <rect class="paper" x="190" y="152" width="10" height="8" rx="1.5"/>
-          <rect class="paper" x="208" y="152" width="10" height="8" rx="1.5"/>
-          <rect class="paper" x="226" y="152" width="10" height="8" rx="1.5"/>
-          <rect class="paper" x="244" y="152" width="10" height="8" rx="1.5"/>
-          <rect class="paper" x="170" y="178" width="11" height="9" rx="1.5"/>
-          <rect class="paper" x="190" y="178" width="11" height="9" rx="1.5"/>
-          <rect class="paper" x="210" y="178" width="11" height="9" rx="1.5"/>
-          <rect class="paper" x="230" y="178" width="11" height="9" rx="1.5"/>
-          <rect class="paper" x="250" y="178" width="11" height="9" rx="1.5"/>
-          <rect class="paper" x="270" y="178" width="11" height="9" rx="1.5"/>
-          <circle class="paper" cx="176" cy="210" r="3"/>
-          <circle class="paper" cx="198" cy="210" r="3"/>
-          <circle class="paper" cx="220" cy="210" r="3"/>
-          <circle class="paper" cx="242" cy="210" r="3"/>
-          <circle class="paper" cx="264" cy="210" r="3"/>
-          <circle class="paper" cx="286" cy="210" r="3"/>
-          <rect class="phone" x="190" y="122" width="14" height="24" rx="3.5"/>
-          <rect class="phone" x="298" y="172" width="14" height="24" rx="3.5"/>
-          <path class="sea-deep" d="M540 226Q610 196 720 208v94H540Z"/>
-          <rect class="hull2" x="612" y="176" width="44" height="32"/>
-          <path class="hull" d="M606 176l28-22 28 22Z"/>
-          <rect class="paper" x="628" y="190" width="12" height="18" rx="1"/>
-          <rect class="phone" x="668" y="186" width="14" height="24" rx="3.5"/>
-          <path class="sea" d="M0 224C80 216 150 230 240 223S420 216 520 224 660 230 720 221v79H0Z"/>
-          <path class="sea-deep" d="M0 266C120 258 260 272 400 265S640 260 720 266v34H0Z" opacity="0.7"/>
-          <path class="ln" d="M60 244q10-5 20 0M350 250q10-5 20 0M560 246q10-5 20 0" opacity="0.5"/>
-          <path class="flow" d="M197 116Q251 88 305 166"/>
-          <path class="flow" d="M305 162Q370 20 455 72"/>
-          <path class="flow" d="M486 76Q600 40 675 180"/>
-          <circle class="node" cx="197" cy="116" r="3.4"/>
-          <circle class="node" cx="305" cy="166" r="3.4"/>
-          <circle class="node-ring" cx="305" cy="166" r="8"/>
-          <circle class="node" cx="675" cy="180" r="3.4"/>
-        </svg>
+      <figure class="hero-video">
+        <video controls preload="metadata" playsinline width="1920" height="1080" poster="/explainer-poster.jpg">
+          <source src="/cruisemesh-explainer.mp4" type="video/mp4">
+          <!-- Not `default`: the video already burns in a short kicker phrase per
+               scene, and browser-rendered cues land in the same bottom strip. The
+               track is verbatim narration, so it is here for anyone who wants it. -->
+          <track kind="captions" src="/explainer-captions.vtt" srclang="en" label="English">
+          <p>Your browser can't play this video. <a href="/cruisemesh-explainer.mp4">Download it</a> (7.7 MB) or read the transcript below.</p>
+        </video>
+        <figcaption>75 seconds: what CruiseMesh is, and how a message gets from the ship to home.</figcaption>
       </figure>
-      <p class="art-caption">Phones on board deliver to each other directly. When one phone gets internet, it carries the whole family's messages home and back.</p>
+      <details class="transcript">
+        <summary>Read the transcript instead</summary>
+        <p>Picture it: a cruise with the whole family. The kids are at the pool, grandma's at the buffet — and your text? Not going anywhere. There's no signal at sea.</p>
+        <p>On the cruise where CruiseMesh was born, ship messaging cost seven dollars per phone, per day. For a family of four, that's nearly two hundred dollars in a week — just to say "meet at the buffet at six."</p>
+        <p>CruiseMesh is different. Text your family when there's no signal — free on board, end-to-end encrypted, no accounts, no SIM card, no internet package.</p>
+        <p>It uses whatever's around. Phones find each other over the ship's Wi-Fi, no internet needed. Up close, they talk over Bluetooth. And family phones carry sealed messages along, until paths cross.</p>
+        <p>And when any one phone does get online — with an optional pass, or your own server — it carries the whole family's messages home and back. Sealed envelopes, that no one else can read.</p>
+        <p>Messages that find a way through. CruiseMesh. Free and open source, at cruisemesh.app.</p>
+      </details>
     </div>
 
     <section class="origin-story" aria-labelledby="origin-story-title">
