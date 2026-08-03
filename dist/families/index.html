@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="What CruiseMesh does for a family: how messages get through without internet, how you add people, what we don't collect, and what the app deliberately doesn't do.">
+  <title>Families — CruiseMesh</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#fefefd" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f151a" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="shell">
+      <a class="brand" href="/">
+        <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+          <path fill="#fff" stroke="#0e2747" stroke-width="1.2" stroke-linejoin="round" d="M14 45 4 62l23-8Z"/>
+          <circle cx="32" cy="30" r="26" fill="#0e2747"/>
+          <circle cx="32" cy="30" r="23.5" fill="none" stroke="#fff" stroke-width="5"/>
+          <circle cx="32" cy="30" r="25.4" fill="none" stroke="#0e2747" stroke-width="1.2"/>
+          <path fill="none" stroke="#a9dcee" stroke-width="2.4" stroke-linecap="round" d="M32 14 20 22M32 14l12 8M32 14v14.5M20 22l12 6.5M44 22l-12 6.5M24 38l8-9.5M40 38l-8-9.5"/>
+          <circle cx="32" cy="14" r="3.4" fill="#fff"/>
+          <circle cx="20" cy="22" r="3.4" fill="#fff"/>
+          <circle cx="44" cy="22" r="3.4" fill="#fff"/>
+          <circle cx="32" cy="28.5" r="3.6" fill="#d8f1f8"/>
+          <circle cx="24" cy="38" r="3.4" fill="#59cfe4"/>
+          <circle cx="40" cy="38" r="3.4" fill="#59cfe4"/>
+          <path d="M24.5 40.5 32 35.5l7.5 5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M24 43h16l-3 8.5q-5 2.8-10 0Z" fill="#fff"/>
+          <path d="M14 52q10-5.5 19-1t24-3.5" fill="none" stroke="#3fc9de" stroke-width="4" stroke-linecap="round"/>
+          <path d="M28 57q9 3.5 19-1.5" fill="none" stroke="#2fb3cf" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        CruiseMesh
+      </a>
+      <nav>
+        <a href="/pass/">Cruise Pass</a>
+        <a href="https://github.com/davidmjacobson/cruisemesh">GitHub</a>
+      </nav>
+    </div>
+  </header>
+  <main class="shell">
+    <div class="intro">
+      <h1>What CruiseMesh does for a family</h1>
+      <p class="lede">It's a messaging app for your family group that keeps working when the internet doesn't. Phones talk straight to each other over Bluetooth and over a Wi-Fi network you're both on, so a message can get from one person to another with no signal, no data plan, and no ship package. Here's what it does, what it doesn't, and where the edges are, so you can decide for yourself.</p>
+    </div>
+
+    <section>
+      <h2>How messages get through</h2>
+      <p>When two family phones are near each other, or on the same Wi-Fi, they hand messages over directly. When they're not, a message can hop: someone else's family phone carries it along and passes it on when it comes within reach of the person it's for. So a phone that's out of range of you may still be reachable through a cousin who's standing between you.</p>
+      <p>That means delivery is best effort, not instant. Most messages land in seconds, but a message can sit and wait until a path opens. It's the right tool for "we're at the pool, meet at six," not for something that has to arrive this minute.</p>
+      <p>Getting a message out to someone far away needs the internet, and that's what a <a href="/pass/">Cruise Pass</a> is for: it gives your family a mailbox online, so when any one of your phones gets online it can carry everyone's messages up and back. Without a pass, the app still works over Bluetooth and Wi-Fi. The pass is about internet delivery, not about the app working.</p>
+    </section>
+
+    <section>
+      <h2>How people get added</h2>
+      <p>You add someone by scanning their code in person, or by sharing your own friend link with them. There's no directory to search, no username to look up, and no matching against phone numbers.</p>
+      <p>Once your family has a <a href="/pass/">Cruise Pass</a>, the app can also suggest connections between people you already know, so not everyone has to scan everyone. Those suggestions stay inside your pass: someone outside it is never suggested to your family, and your family's names are never sent to them. Families without a pass don't get suggestions at all; they add people by scanning codes or sharing links.</p>
+      <p>Two honest limits. Anyone holding your friend link can send you a friend request, and a link can be forwarded by whoever you gave it to, so we can't promise only the people you meant will ever reach you. And once you've shared a link or a code, we can't recall it — it's out there.</p>
+      <p>What you can do is block. Blocking someone stops their messages reaching you, and you can report abuse to us from inside the app.</p>
+    </section>
+
+    <section>
+      <h2>What's in the app</h2>
+      <p>Messages, photos, and voice memos, one to one or in a group, with the people on your friend list. That's the whole app. There's no feed to scroll, nothing posted by strangers, and no ads. Notifications only tell you a message or an invite arrived. The app doesn't nudge anyone to come back or tell them what they're missing.</p>
+    </section>
+
+    <section>
+      <h2>What we don't collect</h2>
+      <ul class="rows">
+        <li><strong>No account</strong><span>Nobody signs up. There's no email address, phone number, or password to enter. That's also why it runs on phones other messengers can't sign in on: a hand-me-down phone with no SIM works fine.</span></li>
+        <li><strong>No address book</strong><span>The app never asks for your phone's contacts and never uploads them.</span></li>
+        <li><strong>No analytics</strong><span>The apps contain no analytics, advertising, or crash-reporting SDKs. We aren't counting your taps.</span></li>
+        <li><strong>Encrypted end to end</strong><span>Messages are sealed between sender and recipient. Our relay only ever handles encrypted data and can't read what's inside. The promise is that we can't read your messages, not that anyone is anonymous or untraceable.</span></li>
+        <li><strong>Only your own details</strong><span>Each phone shares only its own connection details with its contacts, never anyone else's.</span></li>
+      </ul>
+      <p class="footnote">The <a href="/privacy/">privacy policy</a> has the specifics.</p>
+    </section>
+
+    <section>
+      <h2>What it deliberately doesn't do</h2>
+      <p>CruiseMesh has no parental controls of any kind. There's no supervision or monitoring, no screen-time limits, no content filtering, no location sharing, no activity dashboard, and no parent or admin role that can see a family member's messages. There are no separate child accounts, because there are no accounts at all. If you're handing a phone to a younger kid, CruiseMesh doesn't manage that for you. It's a plain messenger between people who added each other, and the rest is your call.</p>
+    </section>
+
+    <section>
+      <h2>Backups</h2>
+      <p>You can save a backup file of your account and messages, locked with a passphrase you choose. The file stays with you: we never receive it, and we can't unlock it or recover it for you if the passphrase is lost. Keep the passphrase somewhere you'll still have it next year.</p>
+    </section>
+
+    <section>
+      <h2>What it costs</h2>
+      <p>The app itself is free and open source, and there's nothing to buy inside it. The only purchase is a <a href="/pass/">Cruise Pass</a> for internet delivery, bought here on the website through a Stripe checkout by whoever holds the family's card.</p>
+    </section>
+
+    <section>
+      <h2>Where it is today</h2>
+      <!-- app-status:families-status -->
+      <p>CruiseMesh is in release testing. It isn't in the app stores yet — both apps arrive in mid-August 2026.</p>
+      <!-- /app-status:families-status -->
+      <p>Questions? Email <a href="mailto:support@cruisemesh.app">support@cruisemesh.app</a>.</p>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div class="shell"><a href="/">Home</a> · <a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a></div>
+  </footer>
+</body>
+</html>
