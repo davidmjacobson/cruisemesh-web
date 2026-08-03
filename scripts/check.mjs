@@ -98,7 +98,7 @@ if (typeof worker.fetch !== "function") {
   throw new Error("Site worker must export a fetch handler");
 }
 if (typeof worker.scheduled !== "function") {
-  throw new Error("Site worker must export a scheduled handler (uptime + reconciliation crons)");
+  throw new Error("Site worker must export a scheduled handler (uptime, reconciliation, expiry-reminder crons)");
 }
 const { relaySetupToken } = await import("../src/relay.js");
 const setupToken = relaySetupToken("https://relay.example", "abc123");
@@ -188,8 +188,8 @@ if (workerFirst[1] !== "true") {
 // expression it does not recognize falls through to the uptime probe — so a
 // cron string that drifts between wrangler.jsonc and ops.js silently runs
 // the wrong job instead of failing.
-const { UPTIME_CRON, RECONCILE_CRON } = await import("../src/ops.js");
-for (const cron of [UPTIME_CRON, RECONCILE_CRON]) {
+const { UPTIME_CRON, RECONCILE_CRON, EXPIRY_CRON } = await import("../src/ops.js");
+for (const cron of [UPTIME_CRON, RECONCILE_CRON, EXPIRY_CRON]) {
   if (!wranglerConfig.includes(`"${cron}"`)) {
     throw new Error(`wrangler.jsonc must declare the "${cron}" cron trigger ops.js dispatches on`);
   }
@@ -328,6 +328,40 @@ if (!emailSource.includes("each family phone needs this setup")) {
 }
 if (emailSource.includes("shared automatically through the friend cards")) {
   throw new Error("Credential email must not imply that friend cards configure Cruise Pass");
+}
+
+// The expiring-pass reminder. Passes do not renew and there is no renewal
+// endpoint, so the reminder may never imply one: a buyer told their pass
+// renews would sail with nothing. It also has to say what still works
+// without a pass, or the email reads as "CruiseMesh stops working".
+if (!emailSource.includes("https://cruisemesh.app/pass/")) {
+  throw new Error("Expiry reminder must link the real purchase page");
+}
+for (const banned of ["renew your pass", "renews automatically", "auto-renew", "Renew now"]) {
+  if (emailSource.toLowerCase().includes(banned.toLowerCase())) {
+    throw new Error(`Expiry reminder must not promise a renewal flow that does not exist ("${banned}")`);
+  }
+}
+for (const requiredText of ["Nothing renews on its own", "Bluetooth and local Wi-Fi", "each family phone needs to be set up"]) {
+  if (!emailSource.includes(requiredText)) {
+    throw new Error(`Expiry reminder must say "${requiredText}"`);
+  }
+}
+const { daysUntil } = await import("../src/email.js");
+const day = 24 * 60 * 60 * 1000;
+for (const [aheadMs, expected] of [[3 * day, "in 3 days"], [2.5 * day, "in 3 days"], [day, "tomorrow"], [0, "today"]]) {
+  if (daysUntil(aheadMs, 0) !== expected) {
+    throw new Error(`Expiry reminder must describe ${aheadMs / day} days ahead as "${expected}"`);
+  }
+}
+// The reminder window is wider than the cron interval, so without a record of
+// which expiry was reminded about, every buyer gets the same email three days
+// running (plus one per cron retry).
+if (!opsSource.includes("expiry_reminded_for_ms")) {
+  throw new Error("Expiry reminders must record the expiry they were sent for, or they repeat daily");
+}
+if (!(await readFile("migrations/0003_expiry_reminder.sql", "utf8")).includes("expiry_reminded_for_ms")) {
+  throw new Error("migrations must add the expiry_reminded_for_ms column src/ops.js writes");
 }
 
 async function listFiles(directory) {

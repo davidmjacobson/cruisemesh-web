@@ -32,12 +32,13 @@
   },
   // Ops crons (src/ops.js, dispatched by the `scheduled` handler): every 15
   // minutes probes relay /healthz and emails on outage/recovery; the weekly
-  // one reconciles D1 purchases against the relay's families table. Times
-  // are UTC. These strings must byte-match UPTIME_CRON / RECONCILE_CRON in
-  // src/ops.js (check.mjs enforces it), and trigger changes only take
+  // one reconciles D1 purchases against the relay's families table; the daily
+  // one emails buyers whose pass expires within three days. Times are UTC.
+  // These strings must byte-match UPTIME_CRON / RECONCILE_CRON / EXPIRY_CRON
+  // in src/ops.js (check.mjs enforces it), and trigger changes only take
   // effect on the next `npx wrangler deploy`.
   "triggers": {
-    "crons": ["*/15 * * * *", "23 14 * * 1"]
+    "crons": ["*/15 * * * *", "23 14 * * 1", "7 15 * * *"]
   },
   "vars": {
     // Stripe Price id for the Cruise Pass one-time payment (LIVE mode, on

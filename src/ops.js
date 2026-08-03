@@ -1,12 +1,25 @@
-// Paid-tier ops crons (CP2c): relay /healthz uptime alerting and the weekly
-// Stripe-D1 <-> relay-families reconciliation. Entry points are dispatched
-// from the `scheduled` handler in index.js on the expressions below, which
-// must byte-match wrangler.jsonc `triggers.crons` (check.mjs enforces it —
-// a drifted string would silently run the wrong job, because every
-// unmatched cron falls through to the uptime probe).
+// Paid-tier ops crons (CP2c): relay /healthz uptime alerting, the weekly
+// Stripe-D1 <-> relay-families reconciliation, and the daily expiring-pass
+// reminder to buyers. Entry points are dispatched from the `scheduled`
+// handler in index.js on the expressions below, which must byte-match
+// wrangler.jsonc `triggers.crons` (check.mjs enforces it — a drifted string
+// would silently run the wrong job, because every unmatched cron falls
+// through to the uptime probe).
+
+import { sendExpiryReminderEmail } from "./email.js";
 
 export const UPTIME_CRON = "*/15 * * * *";
 export const RECONCILE_CRON = "23 14 * * 1"; // Mondays 14:23 UTC
+// Daily 15:07 UTC: late morning in the Americas, evening in Europe — a
+// reasonable hour for the whole customer base, and the only one that matters
+// since a reminder is sent once per pass. The odd minute keeps it off the
+// quarter-hour where the uptime probe already fires.
+export const EXPIRY_CRON = "7 15 * * *";
+
+// How far ahead a pass has to be expiring before the buyer hears about it.
+// Wide enough to act on before the last night of a sailing, narrow enough
+// that "expires in 3 days" is still news.
+const EXPIRY_REMINDER_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 
 // Ops mail goes to the operator, not a buyer, so the addresses are fixed
 // here rather than riding EMAIL_FROM (that var is the buyer-facing pass@
@@ -219,6 +232,91 @@ async function buildReconciliationReport(env) {
   }
   lines.push("", `Checked ${purchases.length} purchase rows against ${families.length} relay families.`);
   return lines.join("\n");
+}
+
+// One buyer-facing reminder per pass, a few days before internet delivery
+// stops. Rows are claimed in D1 before the send (same order fulfill.js uses
+// for the credential email): a claim that is never released can only cost a
+// missed reminder, while sending first could bill the buyer's inbox once a
+// day for three days.
+export async function runExpiryReminders(env) {
+  if (!env.RESEND_API_KEY) {
+    console.error("RESEND_API_KEY unset; expiry reminders not sent");
+    return;
+  }
+  const now = Date.now();
+  // status is how a refund is recorded (the reconciliation job reads it the
+  // same way), so a refunded pass never gets asked to buy another one.
+  // provisioned_ms is required too: a pass that never reached the relay had
+  // no internet delivery to lose, and reconciliation already pages about it.
+  const { results: due } = await env.DB.prepare(
+    `SELECT session_id, email, expires_ms, expiry_reminded_for_ms FROM purchases
+      WHERE status = 'active'
+        AND email <> ''
+        AND provisioned_ms IS NOT NULL
+        AND expires_ms IS NOT NULL
+        AND expires_ms > ?1
+        AND expires_ms <= ?2
+        AND expiry_reminded_for_ms IS NOT expires_ms`,
+  )
+    .bind(now, now + EXPIRY_REMINDER_WINDOW_MS)
+    .all();
+
+  let sent = 0;
+  const failures = [];
+  for (const purchase of due) {
+    try {
+      // Claiming on `expires_ms = ?1` as well means a row whose expiry moved
+      // since the SELECT is left for the next run rather than reminded about
+      // a date that is no longer true.
+      const claim = await env.DB.prepare(
+        `UPDATE purchases SET expiry_reminded_for_ms = ?1
+          WHERE session_id = ?2 AND expires_ms = ?1 AND expiry_reminded_for_ms IS NOT ?1`,
+      )
+        .bind(purchase.expires_ms, purchase.session_id)
+        .run();
+      if (claim.meta.changes === 0) continue; // a concurrent run got there first
+      try {
+        await sendExpiryReminderEmail(env, purchase, now);
+        sent += 1;
+      } catch (error) {
+        await env.DB.prepare(
+          "UPDATE purchases SET expiry_reminded_for_ms = ?1 WHERE session_id = ?2 AND expiry_reminded_for_ms IS ?3",
+        )
+          .bind(purchase.expiry_reminded_for_ms ?? null, purchase.session_id, purchase.expires_ms)
+          .run();
+        throw error;
+      }
+    } catch (error) {
+      // One malformed row, one rejected address, one D1 hiccup must not cost
+      // the rest of the batch its reminder.
+      console.error(`expiry reminder failed for ${purchase.session_id}: ${error}`);
+      failures.push(`${purchase.session_id} (${purchase.email || "no email"}): ${error}`);
+    }
+  }
+
+  console.log(`expiry reminders: ${due.length} due, ${sent} sent, ${failures.length} failed`);
+  if (failures.length > 0) {
+    // Buyer-facing mail that silently stops going out looks exactly like a
+    // quiet week, so a failed batch pages the operator.
+    try {
+      await sendOpsEmail(
+        env,
+        "ALERT: Cruise Pass expiry reminders failed",
+        [
+          `${failures.length} of ${due.length} expiring-pass reminders could not be sent at ${new Date(now).toISOString()}.`,
+          "",
+          ...failures.map((line) => `- ${line}`),
+          "",
+          "Each failed row was left unclaimed, so the next daily run retries it until its pass expires.",
+        ].join("\n"),
+      );
+    } catch (error) {
+      // If the alert cannot go out either, the log is the last copy — do not
+      // let it take the cron down on top of that.
+      console.error(`expiry reminder alert email failed: ${error}`);
+    }
+  }
 }
 
 export async function runReconciliation(env) {

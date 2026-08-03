@@ -2,7 +2,7 @@ import { createCheckoutSession, verifyStripeSignature } from "./stripe.js";
 import { relaySetupLink } from "./relay.js";
 import { fulfillCheckoutSession } from "./fulfill.js";
 import { escapeHtml, formatExpiry } from "./email.js";
-import { RECONCILE_CRON, runReconciliation, runUptimeCheck } from "./ops.js";
+import { EXPIRY_CRON, RECONCILE_CRON, runExpiryReminders, runReconciliation, runUptimeCheck } from "./ops.js";
 import { renderSVG } from "uqr";
 
 // dist/_headers covers the static pages, but it does not apply to anything
@@ -267,6 +267,7 @@ export default {
   // future third schedule stays a one-line change here.
   async scheduled(controller, env) {
     if (controller.cron === RECONCILE_CRON) return runReconciliation(env);
+    if (controller.cron === EXPIRY_CRON) return runExpiryReminders(env);
     return runUptimeCheck(env);
   },
 };
