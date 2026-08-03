@@ -18,5 +18,9 @@ Allow: /
 Disallow: /f/
 Disallow: /r/
 Disallow: /relay/
+# Renewal links land on /pass/renew/?code=… — a payment page for one specific
+# family's pass. The page is noindex as well; this keeps the codes out of a
+# crawler's reach in the first place.
+Disallow: /pass/renew/
 
 Sitemap: https://cruisemesh.app/sitemap.xml

@@ -330,19 +330,22 @@ if (emailSource.includes("shared automatically through the friend cards")) {
   throw new Error("Credential email must not imply that friend cards configure Cruise Pass");
 }
 
-// The expiring-pass reminder. Passes do not renew and there is no renewal
-// endpoint, so the reminder may never imply one: a buyer told their pass
-// renews would sail with nothing. It also has to say what still works
-// without a pass, or the email reads as "CruiseMesh stops working".
+// The expiring-pass reminder. Renewal now exists, so the reminder points at
+// it — but nothing auto-renews, and saying otherwise would turn a one-time
+// payment into an implied subscription. It also has to keep saying what still
+// works without a pass, or the email reads as "CruiseMesh stops working".
 if (!emailSource.includes("https://cruisemesh.app/pass/")) {
   throw new Error("Expiry reminder must link the real purchase page");
 }
-for (const banned of ["renew your pass", "renews automatically", "auto-renew", "Renew now"]) {
+if (!emailSource.includes("https://cruisemesh.app/pass/renew/")) {
+  throw new Error("Expiry reminder must link the renewal page");
+}
+for (const banned of ["renews automatically", "auto-renew", "will be charged", "subscription renews"]) {
   if (emailSource.toLowerCase().includes(banned.toLowerCase())) {
-    throw new Error(`Expiry reminder must not promise a renewal flow that does not exist ("${banned}")`);
+    throw new Error(`Pass email must not imply an automatic renewal ("${banned}")`);
   }
 }
-for (const requiredText of ["Nothing renews on its own", "Bluetooth and local Wi-Fi", "each family phone needs to be set up"]) {
+for (const requiredText of ["Nothing renews on its own", "Bluetooth and local Wi-Fi", "nothing to set up again"]) {
   if (!emailSource.includes(requiredText)) {
     throw new Error(`Expiry reminder must say "${requiredText}"`);
   }
@@ -362,6 +365,276 @@ if (!opsSource.includes("expiry_reminded_for_ms")) {
 }
 if (!(await readFile("migrations/0003_expiry_reminder.sql", "utf8")).includes("expiry_reminded_for_ms")) {
   throw new Error("migrations must add the expiry_reminded_for_ms column src/ops.js writes");
+}
+
+// Renewal. The entire promise is that extending a pass keeps the family token,
+// so no phone is set up twice — a renewal that minted a fresh token would be
+// an ordinary second purchase wearing the word "renew", and every family would
+// find that out mid-trip.
+const renewSource = await readFile("src/renew.js", "utf8");
+const fulfillSource = await readFile("src/fulfill.js", "utf8");
+if (!fulfillSource.includes("renewing ? renewing.family_token : generateFamilyToken()")) {
+  throw new Error("A renewal must reuse the family token of the pass it renews, or every phone needs setting up again");
+}
+// The superseded row staying 'active' is what would mail "your pass expires in
+// 3 days" about a date the customer has already paid past.
+if (!fulfillSource.includes("SET status = 'renewed'")) {
+  throw new Error("Fulfilling a renewal must retire the row it supersedes, or the expiry reminder fires on the old date");
+}
+// D1 has no transactions, so reading the live expiry, adding thirty days and
+// inserting is three independent statements: two renewals of one family
+// landing together would both read E and both write E+30 — two charges, one
+// extension, and two 'active' rows mailing duplicate reminders. The insert
+// therefore refuses when the family has already moved past the date the
+// extension was computed from, and the loser retries onto the new date.
+if (!/NOT EXISTS\s*\(\s*SELECT 1 FROM purchases/.test(fulfillSource)) {
+  throw new Error("The renewal insert must be guarded against a concurrent renewal of the same family");
+}
+// The value the guard compares against is what the live row said a moment ago
+// — NOT the date the new term is measured from. Binding the billing base as
+// the witness compared a refunded family against 0, so the insert refused
+// every attempt: charged, never fulfilled, and invisible to reconciliation
+// because no row was ever written. The two dates differ only for refunded
+// passes, which is why nothing but running the real statement catches it.
+if (!/const witness = renewing \? renewing\.expires_ms \?\? 0 : 0;/.test(fulfillSource)) {
+  throw new Error("The renewal guard must compare against the live row's own expiry, not the billing base");
+}
+// ...and that it is the value actually bound. The SQL exercise below supplies
+// its own bindings, so without this the wiring could still pass `base` while
+// every executed assertion stayed green.
+if (!/renewing \? renewing\.session_id : null,\s*witness,/.test(fulfillSource)) {
+  throw new Error("The renewal insert must bind `witness` as its guard parameter");
+}
+// Executed further down, once PLAN and the renew.js helpers it binds are in
+// scope — see checkRenewalInsertSql.
+// ...and the bookkeeping must not live inside the branch that inserted, or a
+// runner dying in between leaves the superseded row 'active' with no retry.
+if (!/if \(purchase\.renewed_from\) \{/.test(fulfillSource)) {
+  throw new Error("Renewal bookkeeping must run on every fulfillment call, not only the one that inserted the row");
+}
+// The renewal form is the way back in for someone who no longer has the email,
+// and `=` in SQLite is case-sensitive: a buyer who typed John@Example.com at
+// checkout would be told a link was sent, forever, and never receive one.
+if (!fulfillSource.includes(".toLowerCase()")) {
+  throw new Error("Checkout emails must be stored lowercased, or mixed-case buyers cannot renew");
+}
+if (!renewSource.includes("lower(email) = lower(?1)")) {
+  throw new Error("Renewal lookup must match addresses case-insensitively for rows stored before that");
+}
+// Refunded days were given back as money; handing them back again as time
+// would make $9.99 buy a refund plus a free month.
+const { extensionBase: baseFor } = await import("../src/renew.js");
+if (baseFor({ status: "refunded", expires_ms: 999 }) !== null) {
+  throw new Error("A refunded pass must extend from today, not from the date its refund paid for");
+}
+if (baseFor({ status: "active", expires_ms: 999 }) !== 999) {
+  throw new Error("An active pass must extend from its paid-through date");
+}
+// A paid renewal that cannot be matched to a pass gives the customer the one
+// thing the checkout page promised it would not: a new token to set up
+// everywhere. It has to page someone, not just log.
+if (!fulfillSource.includes("alertOrphanedRenewal")) {
+  throw new Error("A renewal fulfilled as a new pass must alert the operator");
+}
+if (!workerSource.includes("renew_session") && !(await readFile("src/stripe.js", "utf8")).includes("renew_session")) {
+  throw new Error("Renewal checkouts must carry a fallback identifier for a code that expires before payment");
+}
+if (!(await readFile("migrations/0004_renewal.sql", "utf8")).includes("renewed_from")) {
+  throw new Error("migrations must add the renewed_from column src/fulfill.js writes");
+}
+const { extendedExpiry: extend, maskEmail: mask } = await import("../src/renew.js");
+const { PLAN: plan } = await import("../src/relay.js");
+const term = plan.days * day;
+// Renewing early must add to the paid-through date, never restart from today:
+// a buyer who renews the day the reminder lands would otherwise donate the
+// remaining days back.
+if (extend(10 * day, 5 * day) !== 10 * day + term) {
+  throw new Error("Renewing early must extend from the current expiry, not from today");
+}
+// ...and a lapsed pass has no remaining days to add to.
+if (extend(5 * day, 10 * day) !== 10 * day + term) {
+  throw new Error("Renewing a lapsed pass must run from today, not from a date in the past");
+}
+// With those in scope, run the real INSERT against the real migrations.
+await checkRenewalInsertSql(fulfillSource);
+if (extend(null, 10 * day) !== 10 * day + term) {
+  throw new Error("Renewing a pass with no expiry must still produce one");
+}
+// Every date a customer is shown before paying has to be the date fulfillment
+// will actually deliver. Both derive from extensionBase, because they differ
+// for a refunded pass — quoting the old paid-through date on the button would
+// take money against up to thirty days that will not be given.
+// Only the two places that quote a date *before* the money moves: everywhere
+// else, a fulfilled row's expires_ms is the truth and quoting it is right.
+const functionBody = (source, marker) => {
+  const start = source.indexOf(marker);
+  if (start < 0) throw new Error(`Could not find ${marker} to check its quoted dates`);
+  const rest = source.slice(start + marker.length);
+  const end = rest.search(/\n(?:export )?(?:async )?function /);
+  return rest.slice(0, end < 0 ? undefined : end);
+};
+for (const [label, body] of [
+  ["The renewal page", functionBody(workerSource, "async function handleRenewPage")],
+  ["The renewal link email", functionBody(emailSource, "export async function sendRenewalLinkEmail")],
+]) {
+  if (/purchase\.expires_ms/.test(body)) {
+    throw new Error(`${label} must quote dates via extensionBase, not raw expires_ms — they differ for a refunded pass`);
+  }
+  if (!body.includes("extensionBase(purchase)")) {
+    throw new Error(`${label} must derive its dates the way fulfillment does`);
+  }
+}
+
+// The renewal page is reachable by anyone holding the link, so it names the
+// address in masked form only.
+if (mask("someone@example.com").includes("someone")) {
+  throw new Error("The renewal page must not print the buyer's full address");
+}
+if (!mask("someone@example.com").endsWith("@example.com")) {
+  throw new Error("A masked address must keep its domain, or nobody can tell which pass it is");
+}
+// Enumeration: the renewal request endpoint answers identically whether or not
+// an address bought a pass, so it can never be used to ask "is this person a
+// CruiseMesh customer?".
+if (!workerSource.includes("sameForEveryone")) {
+  throw new Error("The renewal request endpoint must answer identically for known and unknown addresses");
+}
+if (!renewSource.includes("RENEW_EMAIL_COOLDOWN_MS")) {
+  throw new Error("Renewal link emails must be rate limited, or the form is an inbox flooder");
+}
+// Identical words are not an identical answer: a known address that spends a
+// Resend round-trip before replying times the difference out loud, which is
+// the same enumeration the wording is there to prevent.
+if (!workerSource.includes("ctx.waitUntil(deliver())")) {
+  throw new Error("The renewal request must answer before looking the address up, or its timing enumerates customers");
+}
+// A reminder claimed for a row that a renewal has just retired mails "expires
+// in 3 days" minutes after the customer paid to extend it.
+if (!/UPDATE purchases SET expiry_reminded_for_ms[\s\S]{0,200}status = 'active'/.test(opsSource)) {
+  throw new Error("The expiry-reminder claim must require status='active', or a just-renewed pass still gets reminded");
+}
+// A renewal link is a payment page for one family's pass; it must not be
+// crawlable, in the page's own head and in robots.txt.
+const renewPage = await readFile("dist/pass/renew/index.html", "utf8");
+if (!renewPage.includes('content="noindex')) {
+  throw new Error("dist/pass/renew/index.html must be noindex; renewal codes arrive on that path");
+}
+if (!robots.includes("Disallow: /pass/renew/")) {
+  throw new Error("robots.txt must disallow /pass/renew/, where renewal codes land");
+}
+
+// The renewal insert, executed rather than pattern-matched.
+//
+// Everything else in this file checks the *shape* of the source, which is
+// enough for copy and for wiring, and is not enough here: the guard's failure
+// mode is a statement that parses, reads sensibly, and refuses to insert for
+// one class of customer. That is how a fix for the refund accounting silently
+// stranded every refunded renewal — charged, no row written, nothing for the
+// reconciliation job to find. So the real statement is lifted out of
+// src/fulfill.js, run against the real migrations in an in-memory SQLite, and
+// asked the questions that matter.
+async function checkRenewalInsertSql(source) {
+  // node:sqlite is experimental and says so on stderr; that warning is not a
+  // finding and must not be the loudest thing `npm run check` prints.
+  const emitWarning = process.emitWarning;
+  process.emitWarning = (warning, ...rest) => {
+    if (String(warning).includes("SQLite is an experimental feature")) return;
+    return emitWarning.call(process, warning, ...rest);
+  };
+  const { DatabaseSync } = await import("node:sqlite");
+  process.emitWarning = emitWarning;
+
+  const statement = /INSERT INTO purchases \(session_id, customer_id[\s\S]*?DO NOTHING/.exec(source)?.[0];
+  if (!statement) throw new Error("Could not find the renewal INSERT in src/fulfill.js to exercise");
+
+  const db = new DatabaseSync(":memory:");
+  for (const file of (await readdir("migrations")).sort()) {
+    db.exec(await readFile(join("migrations", file), "utf8"));
+  }
+  const insert = db.prepare(statement);
+  const now = 2_000_000_000_000;
+  const term = plan.days * day;
+  // Mirrors insertPurchaseRow: witness is the live row's own expiry, base is
+  // what the term is measured from.
+  const renew = (sessionId, live) =>
+    insert.run(
+      sessionId, null, "buyer@example.com", live.family_token, "https://relay.example",
+      plan.id, now, extend(baseFor(live), now), live.session_id, live.expires_ms ?? 0,
+    ).changes;
+  const seed = (row) =>
+    db.prepare(
+      `INSERT INTO purchases (session_id, email, family_token, relay_url, plan, status, created_ms, expires_ms)
+       VALUES (?, 'buyer@example.com', ?, 'https://relay.example', ?, ?, ?, ?)`,
+    ).run(row.session_id, row.family_token, plan.id, row.status, row.created_ms ?? 1, row.expires_ms);
+  const liveRow = (token) =>
+    db.prepare(
+      "SELECT * FROM purchases WHERE family_token = ? ORDER BY COALESCE(expires_ms, 0) DESC, created_ms DESC LIMIT 1",
+    ).get(token);
+
+  // A refunded pass must still be renewable: its own expiry is the witness,
+  // while the term runs from today because the refunded days were paid back.
+  seed({ session_id: "cs_refunded", family_token: "FAM_R", status: "refunded", expires_ms: now + 5 * day });
+  if (renew("cs_r2", liveRow("FAM_R")) !== 1) {
+    throw new Error("Renewing a refunded pass must insert; the customer has paid and nothing else will write this row");
+  }
+  if (liveRow("FAM_R").expires_ms !== now + term) {
+    throw new Error("A refunded pass must extend from today, not from the date its refund paid back");
+  }
+
+  // Two renewals of one family racing: the second carries a witness that has
+  // gone stale, and must lose rather than overwrite the first's extension.
+  seed({ session_id: "cs_a", family_token: "FAM_C", status: "active", expires_ms: now + 10 * day });
+  const stale = liveRow("FAM_C");
+  if (renew("cs_b", stale) !== 1) throw new Error("The first of two concurrent renewals must win");
+  if (renew("cs_c", stale) !== 0) {
+    throw new Error("A renewal carrying a stale expiry must lose the guard, or one of two payments buys nothing");
+  }
+  // ...and on the retry it stacks onto the extended date: two payments, sixty days.
+  if (renew("cs_c", liveRow("FAM_C")) !== 1) throw new Error("A retried renewal must stack onto the new date");
+  if (liveRow("FAM_C").expires_ms !== now + 10 * day + 2 * term) {
+    throw new Error("Two paid renewals must add two terms, not one");
+  }
+
+  // A pass with no expiry at all, and a brand-new purchase, must never be
+  // blocked: the guard only governs renewals.
+  seed({ session_id: "cs_null", family_token: "FAM_N", status: "active", expires_ms: null });
+  if (renew("cs_n2", liveRow("FAM_N")) !== 1) throw new Error("Renewing a pass with no expiry must insert");
+  if (insert.run("cs_fresh", null, "new@example.com", "FAM_NEW", "https://relay.example",
+    plan.id, now, now + term, null, 0).changes !== 1) {
+    throw new Error("A new purchase must never be blocked by the renewal guard");
+  }
+
+  // The live-row query, run rather than read. Its ORDER BY decides which row
+  // every later resolve, quoted date and guard comparison keys off, and a
+  // refunded renewal can carry a later expiry than the pass that replaced it.
+  const liveSql = /SELECT \* FROM purchases\s*\n\s*WHERE family_token = \?1[\s\S]*?LIMIT 1/.exec(
+    await readFile("src/renew.js", "utf8"),
+  )?.[0];
+  if (!liveSql) throw new Error("Could not find livePurchaseForFamily's query in src/renew.js to exercise");
+  seed({ session_id: "cs_paid", family_token: "FAM_X", status: "active", created_ms: 2, expires_ms: now + 40 * day });
+  seed({ session_id: "cs_refunded_late", family_token: "FAM_X", status: "refunded", created_ms: 1, expires_ms: now + 60 * day });
+  if (db.prepare(liveSql).get("FAM_X").session_id !== "cs_paid") {
+    throw new Error("A refunded row must never outrank a paid one as the live pass, whatever its expiry");
+  }
+
+  // The redeem UPDATE, likewise. It re-runs on every fulfillment call, so it
+  // must not reach forward and spend a code minted after the renewal it
+  // records — which would stamp a redemption earlier than the code's own
+  // creation and void the cooldown that code was still under.
+  const redeemSql = /UPDATE renewals SET redeemed_ms[\s\S]*?family_token = \?3\)/.exec(fulfillSource)?.[0];
+  if (!redeemSql) throw new Error("Could not find the redeem UPDATE in src/fulfill.js to exercise");
+  const code = (name, sessionId, createdMs) =>
+    db.prepare("INSERT INTO renewals (code, session_id, created_ms, expires_ms) VALUES (?, ?, ?, ?)")
+      .run(name, sessionId, createdMs, now + 90 * day);
+  code("before", "cs_a", now - day);   // outstanding when the renewal was paid
+  code("after", "cs_b", now + day);    // minted later, by the expiry cron
+  db.prepare(redeemSql).run(now, "cs_b", "FAM_C");
+  const redeemed = (name) => db.prepare("SELECT redeemed_ms FROM renewals WHERE code = ?").get(name).redeemed_ms;
+  if (redeemed("before") === null) throw new Error("A renewal must spend the codes outstanding when it was paid for");
+  if (redeemed("after") !== null) {
+    throw new Error("A renewal must not spend a code minted after it; that back-dates a redemption and voids the cooldown");
+  }
+  db.close();
 }
 
 async function listFiles(directory) {

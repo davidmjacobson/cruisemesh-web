@@ -104,6 +104,48 @@ the `/api/` endpoints simply return errors.
    `wrangler.redirect.jsonc` gets its DNS record and certificate from that
    deploy and needs no dashboard step.
 
+## Renewing a pass
+
+Renewing **extends the pass a family already has, on the same family token**.
+That is the whole feature: the setup card does not change, so no phone is set
+up a second time. A renewal that minted a fresh token would just be a second
+purchase wearing the word "renew", and the family would discover that mid-trip.
+
+There are no accounts, so ownership is proved the way it was established — by
+the address that bought the pass. A one-time code (`renewals` table) is mailed
+to it and says which pass a checkout extends. The code is not the family token
+and grants no access to messages: the worst a stolen one can do is let a thief
+pay to extend somebody else's pass.
+
+Two ways in, one mechanism:
+
+- the expiry reminder (`src/ops.js`) carries a ready-made link, so the common
+  case is one tap from the email that says the pass is running out;
+- `/pass/renew/` takes an address and mails a fresh link. It answers
+  identically whether or not that address has a pass, so it cannot be used to
+  ask whether someone is a customer, and `issueRenewalCode` rate-limits sends
+  to one per pass per hour so the form cannot flood an inbox.
+
+Fulfillment (`src/fulfill.js`) then runs the ordinary three steps with one
+difference: it reuses the family token of the pass being renewed and extends
+from that pass's paid-through date, so renewing early costs no days. The relay's
+`POST /admin/families` upserts on the token, so provisioning moves the existing
+family's expiry rather than creating a second one. The superseded row moves to
+`status = 'renewed'` — that is what stops the expiry reminder mailing about a
+date already paid past, and keeps reconciliation reading the live row.
+
+A renewal link that no longer resolves (expired between checkout and payment)
+falls back to issuing a normal new pass rather than failing: the customer paid,
+so they get a working pass either way, and the credential email explains the
+setup that one needs.
+
+Renewal adds no secrets and no cron. It does need `migrations/0004_renewal.sql`
+applied before deploy:
+
+```sh
+npx wrangler d1 migrations apply cruisemesh-web --remote
+```
+
 ## Association identifiers
 
 - Android package: `com.cruisemesh.app`

@@ -359,6 +359,20 @@ section:first-of-type, .intro { margin-top: 0; padding-top: 0; border-top: 0; }
 }
 #recover-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
+/* The renewal page's one field. Same box as the card-recovery input, in the
+   page's own face rather than monospace: this is an address someone types
+   from memory, not a card they paste. */
+#renew-email {
+  width: min(24rem, 100%);
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--soft);
+  font: inherit;
+}
+#renew-email:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
 .notice { margin-top: 14px; min-height: 1.4em; color: var(--accent-ink); font-weight: 550; }
 .notice.success { padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 12%, transparent); }
 

@@ -6,7 +6,8 @@
 // would silently run the wrong job, because every unmatched cron falls
 // through to the uptime probe).
 
-import { sendExpiryReminderEmail } from "./email.js";
+import { renewLink, sendExpiryReminderEmail } from "./email.js";
+import { issueRenewalCode, markRenewalCodeSent } from "./renew.js";
 
 export const UPTIME_CRON = "*/15 * * * *";
 export const RECONCILE_CRON = "23 14 * * 1"; // Mondays 14:23 UTC
@@ -45,7 +46,9 @@ function tokenPrefix(token) {
   return `${String(token).slice(0, 12)}…`;
 }
 
-async function sendOpsEmail(env, subject, text) {
+// Exported so fulfillment can page on a renewal it could not match to a pass,
+// which is a paying customer silently getting the wrong thing.
+export async function sendOpsEmail(env, subject, text) {
   if (!env.RESEND_API_KEY) {
     // Fresh deploy / local dev: never let a missing secret turn an alert
     // into a silent no-op — the text still lands in the logs.
@@ -65,6 +68,10 @@ async function sendOpsEmail(env, subject, text) {
       subject,
       text,
     }),
+    // Bounded because this is no longer cron-only: fulfillment pages here on
+    // the orphaned-renewal path, and a slow Resend must not hold up the
+    // success page of a customer who has already paid.
+    signal: AbortSignal.timeout(ADMIN_TIMEOUT_MS),
   });
   if (!response.ok) {
     throw new Error(`Resend rejected the ops email (HTTP ${response.status}): ${await response.text()}`);
@@ -269,15 +276,39 @@ export async function runExpiryReminders(env) {
       // Claiming on `expires_ms = ?1` as well means a row whose expiry moved
       // since the SELECT is left for the next run rather than reminded about
       // a date that is no longer true.
+      // `status = 'active'` is part of the claim, not just the SELECT: a
+      // renewal fulfilled between the two flips the row to 'renewed', and
+      // without this the customer gets "your pass expires in 3 days" minutes
+      // after paying to extend it.
       const claim = await env.DB.prepare(
         `UPDATE purchases SET expiry_reminded_for_ms = ?1
-          WHERE session_id = ?2 AND expires_ms = ?1 AND expiry_reminded_for_ms IS NOT ?1`,
+          WHERE session_id = ?2 AND expires_ms = ?1 AND status = 'active'
+            AND expiry_reminded_for_ms IS NOT ?1`,
       )
         .bind(purchase.expires_ms, purchase.session_id)
         .run();
       if (claim.meta.changes === 0) continue; // a concurrent run got there first
       try {
-        await sendExpiryReminderEmail(env, purchase, now);
+        // One-tap renewal from the reminder itself: the code identifies which
+        // pass to extend, so the buyer never has to prove ownership again. A
+        // code that cannot be minted (a D1 hiccup) must not cost the reminder
+        // — the email falls back to the renewal page, which mails a fresh
+        // link on request.
+        let url = null;
+        let issuedCode = null;
+        try {
+          const { code } = await issueRenewalCode(env, purchase, now);
+          issuedCode = code;
+          url = renewLink(code);
+        } catch (error) {
+          console.error(`renewal code for ${purchase.session_id} could not be issued: ${error}`);
+        }
+        await sendExpiryReminderEmail(env, purchase, now, url);
+        // Marked sent only after the mail is away. Recording it first would
+        // make a failed reminder start the cooldown, so a buyer who then asked
+        // /pass/renew/ for a link inside the hour would be told one was sent
+        // and receive nothing at all.
+        if (issuedCode) await markRenewalCodeSent(env, issuedCode, now);
         sent += 1;
       } catch (error) {
         await env.DB.prepare(
