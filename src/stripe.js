@@ -54,6 +54,28 @@ export function createCheckoutSession(env, origin) {
   });
 }
 
+// A renewal is the same product at the same price; what makes it a renewal is
+// the code in metadata, which fulfillment reads to extend an existing family
+// token instead of minting a new one. Metadata rides on the session, so it
+// reaches the webhook path as well as the success page.
+export function createRenewalCheckoutSession(env, origin, { code, email, sessionId }) {
+  return stripeRequest(env, "POST", "/checkout/sessions", {
+    mode: "payment",
+    "line_items[0]": { price: env.STRIPE_PRICE_ID, quantity: 1 },
+    allow_promotion_codes: true,
+    // Prefilled for convenience, never trusted: which pass gets extended is
+    // resolved from the code, not from whatever address is typed at Stripe.
+    customer_email: email || undefined,
+    // Two ways to find the pass again at fulfillment. The code can age out
+    // between the click and the payment (asynchronous methods settle days
+    // later); the purchase id cannot. Neither is a credential — the family
+    // token is never sent to Stripe.
+    metadata: { renew_code: code, renew_session: sessionId },
+    success_url: `${origin}/relay/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/pass/renew/?code=${encodeURIComponent(code)}&canceled=1`,
+  });
+}
+
 export function getCheckoutSession(env, sessionId) {
   return stripeRequest(env, "GET", `/checkout/sessions/${encodeURIComponent(sessionId)}`);
 }

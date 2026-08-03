@@ -1,7 +1,11 @@
-import { createCheckoutSession, verifyStripeSignature } from "./stripe.js";
-import { relaySetupLink } from "./relay.js";
+import { createCheckoutSession, createRenewalCheckoutSession, verifyStripeSignature } from "./stripe.js";
+import { PLAN, relaySetupLink } from "./relay.js";
 import { fulfillCheckoutSession } from "./fulfill.js";
-import { escapeHtml, formatExpiry } from "./email.js";
+import { escapeHtml, formatExpiry, renewLink, sendRenewalLinkEmail } from "./email.js";
+import {
+  extendedExpiry, extensionBase, issueRenewalCode, markRenewalCodeSent, maskEmail,
+  renewablePurchaseForEmail, resolveRenewalCode,
+} from "./renew.js";
 import { EXPIRY_CRON, RECONCILE_CRON, runExpiryReminders, runReconciliation, runUptimeCheck } from "./ops.js";
 import { renderSVG } from "uqr";
 
@@ -92,6 +96,150 @@ async function handleCheckout(request, env) {
   return json({ url: session.url });
 }
 
+// Ask for a renewal link. The response never varies: an address with no pass
+// and an address with one get the same words, so this cannot be used to find
+// out who bought CruiseMesh. Rate limiting lives in issueRenewalCode, which
+// declines to send again inside the cooldown while still answering normally.
+//
+// Identical words are not enough on their own — a known address used to spend
+// a Resend round-trip before answering, which times the difference out loud.
+// The lookup and the send therefore run in waitUntil, after the response is
+// already on its way, so every caller is answered at the same speed.
+async function handleRenewRequest(request, env, ctx) {
+  const sameForEveryone = json({
+    ok: true,
+    message: "If that address has a Cruise Pass, we've sent it a link to extend it.",
+  });
+  let email = "";
+  try {
+    email = String((await request.json())?.email ?? "").trim().toLowerCase();
+  } catch {
+    return sameForEveryone;
+  }
+  if (!email || email.length > 254 || !email.includes("@")) return sameForEveryone;
+
+  const deliver = async () => {
+    try {
+      const purchase = await renewablePurchaseForEmail(env, email);
+      if (!purchase) return;
+      if (!env.RESEND_API_KEY) {
+        // Nothing else records this: without mail there is no way to deliver a
+        // renewal link at all, and the buyer is staring at "check your inbox".
+        console.error(`renewal link not sent for ${purchase.session_id}: RESEND_API_KEY is not configured`);
+        return;
+      }
+      const { code, shouldSend } = await issueRenewalCode(env, purchase);
+      if (!shouldSend) return;
+      await sendRenewalLinkEmail(env, purchase, renewLink(code));
+      // Sent first, recorded second: a link recorded as delivered but never
+      // sent locks the address out for the length of the cooldown.
+      await markRenewalCodeSent(env, code);
+    } catch (error) {
+      // A failure here must not tell the caller whether the address exists.
+      console.error(`renewal link request failed: ${error}`);
+    }
+  };
+  // ctx is absent only if this is ever called outside a fetch handler; await
+  // rather than drop the send on the floor.
+  if (ctx?.waitUntil) ctx.waitUntil(deliver());
+  else await deliver();
+  return sameForEveryone;
+}
+
+// Start the checkout that extends an existing pass.
+async function handleRenewCheckout(request, env) {
+  let code = "";
+  try {
+    code = String((await request.json())?.code ?? "");
+  } catch {
+    return json({ error: "invalid request" }, 400);
+  }
+  const renewing = await resolveRenewalCode(env, code);
+  if (!renewing) return json({ error: "This renewal link has expired. Request a new one." }, 404);
+  const session = await createRenewalCheckoutSession(env, new URL(request.url).origin, {
+    code,
+    email: renewing.purchase.email,
+    sessionId: renewing.purchase.session_id,
+  });
+  return json({ url: session.url });
+}
+
+// The page an emailed renewal link lands on: what is being extended, through
+// what date, and one button. Worker-rendered because the answer depends on
+// the code; /pass/renew/ without a code is the static request form.
+async function handleRenewPage(request, env) {
+  const url = new URL(request.url);
+  const code = url.searchParams.get("code");
+  const renewing = await resolveRenewalCode(env, code);
+  if (!renewing) {
+    return page(
+      "Renewal link expired — CruiseMesh",
+      `<p class="eyebrow">Cruise Pass</p>
+       <h1>This renewal link has expired.</h1>
+       <p class="lede">Renewal links stop working after a while, and each one belongs to a single pass. Ask for a fresh one and we'll email it to the address that bought the pass.</p>
+       <div class="actions"><a class="button" href="/pass/renew/">Email me a new link</a><a class="button secondary" href="/support/">Get help</a></div>`,
+    );
+  }
+
+  const { purchase } = renewing;
+  const now = Date.now();
+  // Every date shown here is derived the same way fulfillment derives it —
+  // through extensionBase, not raw expires_ms. A refunded pass extends from
+  // today, so quoting its old paid-through date would put a number on the
+  // payment button that fulfillment deliberately will not honour, and the
+  // customer would pay against a promise of up to thirty days it never had.
+  const refunded = purchase.status === "refunded";
+  const base = extensionBase(purchase);
+  const lapsed = base && base <= now;
+  const standing = refunded
+    ? "This pass was refunded, so internet delivery is not running."
+    : lapsed
+      ? `Internet delivery stopped on <strong>${escapeHtml(formatExpiry(base))}</strong>.`
+      : `Internet delivery runs until <strong>${escapeHtml(formatExpiry(base))}</strong>.`;
+  const through = formatExpiry(extendedExpiry(base, now));
+  const canceled = url.searchParams.get("canceled")
+    ? `<div class="notice" role="status">Checkout canceled. Nothing was charged.</div>`
+    : "";
+
+  return page(
+    "Extend your Cruise Pass — CruiseMesh",
+    `<p class="eyebrow">Cruise Pass</p>
+     <h1>Extend your Cruise Pass.</h1>
+     <p class="lede">${standing} Extending adds another ${PLAN.days} days and keeps your family's existing setup card, so there is nothing to set up again — every phone you already set up keeps working.</p>
+     ${canceled}
+     <p class="price">$9.99 <span>· extends to ${escapeHtml(through)} · one payment, no subscription</span></p>
+     <div class="actions">
+       <button class="button" id="renew" type="button">Extend to ${escapeHtml(through)}</button>
+       <a class="button secondary" href="/support/">Get help</a>
+     </div>
+     <div class="notice" id="notice" role="status" aria-live="polite"></div>
+     <p class="footnote">This is the pass bought with <strong>${escapeHtml(maskEmail(purchase.email))}</strong>. Extending early costs no days: the ${PLAN.days} days are added to the date above, not to today. Nothing renews on its own, so you will not be charged again.</p>
+     <script>
+       (() => {
+         const button = document.querySelector("#renew");
+         const notice = document.querySelector("#notice");
+         button.addEventListener("click", async () => {
+           button.disabled = true;
+           notice.textContent = "Opening checkout…";
+           try {
+             const response = await fetch("/api/renew/checkout", {
+               method: "POST",
+               headers: { "content-type": "application/json" },
+               body: JSON.stringify({ code: ${JSON.stringify(code).replaceAll("<", "\\u003c")} }),
+             });
+             const body = await response.json();
+             if (body.url) { location.href = body.url; return; }
+             notice.textContent = body.error || "Could not start checkout. Please try again.";
+           } catch {
+             notice.textContent = "Could not reach checkout. Check your connection and try again.";
+           }
+           button.disabled = false;
+         });
+       })();
+     </script>`,
+  );
+}
+
 async function handleStripeWebhook(request, env) {
   const payload = await request.text();
   const valid = await verifyStripeSignature(payload, request.headers.get("stripe-signature"), env.STRIPE_WEBHOOK_SECRET);
@@ -145,6 +293,33 @@ async function handleSuccess(request, env) {
 
   const setupLink = relaySetupLink(url.origin, purchase.relay_url, purchase.family_token);
   const setupCard = setupLink.slice(setupLink.indexOf("#") + 1);
+
+  // A renewal kept the family token, so the setup steps, the QR, and the
+  // "open in CruiseMesh" button all describe work nobody has to do. Showing
+  // them anyway is how a renewal turns into a family walking round every
+  // phone re-scanning a card that never changed.
+  if (purchase.renewed_from) {
+    const renewalEmailNote = purchase.email_sent_ms
+      ? `<p>We emailed this confirmation to <strong>${escapeHtml(purchase.email)}</strong>.</p>`
+      : "";
+    return page(
+      "Your Cruise Pass is extended — CruiseMesh",
+      `<p class="eyebrow">Cruise Pass</p>
+       <h1>Extended to ${escapeHtml(formatExpiry(purchase.expires_ms))}.</h1>
+       <p class="lede">There is nothing to set up. Your family keeps the same setup card, every phone you already set up keeps working, and internet delivery simply continues.</p>
+       ${purchase.provisioned_ms
+         ? `<div class="notice success" role="status">Internet delivery is active until ${escapeHtml(formatExpiry(purchase.expires_ms))}.</div>`
+         : `<div class="notice" role="status">The new date is still being applied — normally under a minute. Until it lands, the old expiry is still in force, so if your pass had already lapsed, internet delivery resumes when it does.</div>`}
+       ${renewalEmailNote}
+       <p>Nothing renews on its own, so you will not be charged again. We'll email you a few days before this date.</p>
+       <div class="actions"><a class="button secondary" href="/support/">Setup help</a></div>
+       <details class="manual-setup">
+         <summary>Adding a phone that never had the pass?</summary>
+         <p>Open this link on that phone. Anyone with it can use your family's internet delivery, so share it only with your own phones.</p>
+         <div class="token">${escapeHtml(setupLink)}</div>
+       </details>`,
+    );
+  }
   // This page is served from cruisemesh.app, and iOS does not fire a Universal
   // Link for a same-domain navigation — so an https link to /r here is inert in
   // Safari, and Chrome declines it too. Mirrors what dist/open-in-app.mjs does
@@ -233,7 +408,7 @@ async function handleSuccess(request, env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     // Cloudflare answers this Worker on http:// as well as https://, and the
     // "Always Use HTTPS" toggle lives in a dashboard rather than in this repo,
@@ -251,6 +426,17 @@ export default {
     }
     try {
       if (url.pathname === "/api/checkout" && request.method === "POST") return await handleCheckout(request, env);
+      if (url.pathname === "/api/renew/request" && request.method === "POST") return await handleRenewRequest(request, env, ctx);
+      if (url.pathname === "/api/renew/checkout" && request.method === "POST") return await handleRenewCheckout(request, env);
+      // Only a link carrying a code is rendered here; a bare /pass/renew/ is
+      // the static page that asks for an address, and falls through to assets.
+      if (
+        (url.pathname === "/pass/renew" || url.pathname === "/pass/renew/") &&
+        request.method === "GET" &&
+        url.searchParams.has("code")
+      ) {
+        return await handleRenewPage(request, env);
+      }
       if (url.pathname === "/api/stripe/webhook" && request.method === "POST") return await handleStripeWebhook(request, env);
       if (url.pathname === "/relay/success" && request.method === "GET") return await handleSuccess(request, env);
     } catch (error) {
