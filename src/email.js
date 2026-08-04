@@ -102,7 +102,11 @@ export async function sendCredentialEmail(env, purchase, setupLink) {
     "2. Choose Review, and check the host CruiseMesh shows.",
     "3. Choose Test and use. CruiseMesh saves the pass only after that check succeeds.",
     "",
-    "If the link did not open CruiseMesh, copy the setup card (the text starting CMRELAY1:) from the end of it, then open Settings -> Shore Pass, choose Paste card, then Review.",
+    // TRANSITIONAL: the shipped app still says Cruise Pass on this screen, and
+    // the fleet updates at its own pace, so every instruction that names the
+    // screen carries both names. Drop the parentheticals once the renamed
+    // build has reached the field.
+    "If the link did not open CruiseMesh, copy the setup card (the text starting CMRELAY1:) from the end of it, then open Settings -> Shore Pass (called Cruise Pass on older app versions), choose Paste card, then Review.",
     "",
     "One pass covers your whole family, and each family phone needs this setup. Once the first phone is ready, use Set up another phone or Show setup QR in Settings -> Shore Pass.",
     "",
@@ -128,7 +132,7 @@ export async function sendCredentialEmail(env, purchase, setupLink) {
         <li>Choose <strong>Review</strong>, and check the host CruiseMesh shows.</li>
         <li>Choose <strong>Test and use</strong>. CruiseMesh saves the pass only after that check succeeds.</li>
       </ol>
-      <p>If the link did not open CruiseMesh, copy the setup card (the text starting <code>CMRELAY1:</code>) from the end of it, then open <strong>Settings &rarr; Shore Pass</strong>, choose <strong>Paste card</strong>, then <strong>Review</strong>.</p>
+      <p>If the link did not open CruiseMesh, copy the setup card (the text starting <code>CMRELAY1:</code>) from the end of it, then open <strong>Settings &rarr; Shore Pass</strong> (called Cruise Pass on older app versions), choose <strong>Paste card</strong>, then <strong>Review</strong>.</p>
       <p>One pass covers your whole family, and each family phone needs this setup. Once the first phone is ready, use <strong>Set up another phone</strong> or <strong>Show setup QR</strong> in Settings &rarr; Shore Pass.</p>
       <p>Shore Pass sets up internet delivery. It does not add contacts, and it does not share a phone's internet connection.</p>
       <p>Pass expires: ${escapeHtml(expiry)}</p>
