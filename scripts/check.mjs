@@ -100,6 +100,59 @@ if (typeof worker.fetch !== "function") {
 if (typeof worker.scheduled !== "function") {
   throw new Error("Site worker must export a scheduled handler (uptime, reconciliation, expiry-reminder crons)");
 }
+// Byte ranges. iOS Safari opens a video with a small probe range and gives up
+// on the element unless the answer is a 206, so an unseekable file is an
+// unplayable one on the phones this site is aimed at. The Asset Worker does
+// not answer Range — it returns the whole body with a 200 — so src/index.js
+// answers it, and this pins that behaviour down. A stub stands in for the
+// ASSETS binding; the point is the Worker's range arithmetic, not Cloudflare's.
+const rangeBody = new Uint8Array(1000).map((_, i) => i % 256);
+const stubAssets = {
+  fetch: async () =>
+    new Response(rangeBody, {
+      status: 200,
+      headers: { "content-type": "video/mp4", etag: '"whole-file"' },
+    }),
+};
+const rangeRequest = (value) =>
+  worker.fetch(new Request("https://cruisemesh.app/cruisemesh-explainer.mp4", { headers: { range: value } }), {
+    ASSETS: stubAssets,
+  });
+
+for (const [header, status, contentRange, length] of [
+  ["bytes=0-1", 206, "bytes 0-1/1000", 2],
+  ["bytes=100-199", 206, "bytes 100-199/1000", 100],
+  ["bytes=900-", 206, "bytes 900-999/1000", 100],
+  ["bytes=-50", 206, "bytes 950-999/1000", 50],
+  ["bytes=5000-", 416, "bytes */1000", null],
+]) {
+  const response = await rangeRequest(header);
+  if (response.status !== status) {
+    throw new Error(`Range "${header}" must answer ${status}, got ${response.status}`);
+  }
+  if (response.headers.get("content-range") !== contentRange) {
+    throw new Error(`Range "${header}" must report "${contentRange}", got "${response.headers.get("content-range")}"`);
+  }
+  if (response.headers.get("etag")) {
+    throw new Error(`Range "${header}" must not keep the whole file's ETag on a partial body`);
+  }
+  if (length !== null) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.length !== length) throw new Error(`Range "${header}" must return ${length} bytes, got ${bytes.length}`);
+    const [start] = contentRange.slice("bytes ".length).split("-").map(Number);
+    if (!bytes.every((byte, i) => byte === rangeBody[start + i])) {
+      throw new Error(`Range "${header}" returned the wrong slice of the file`);
+    }
+  }
+}
+// A player that sees no Accept-Ranges may never ask for a range at all.
+const wholeFile = await worker.fetch(new Request("https://cruisemesh.app/cruisemesh-explainer.mp4"), {
+  ASSETS: stubAssets,
+});
+if (wholeFile.headers.get("accept-ranges") !== "bytes") {
+  throw new Error("Asset responses must advertise Accept-Ranges: bytes");
+}
+
 const { relaySetupToken } = await import("../src/relay.js");
 const setupToken = relaySetupToken("https://relay.example", "abc123");
 if (!/^CMRELAY1:[A-Za-z0-9_-]+$/.test(setupToken)) {

@@ -21,6 +21,63 @@ const SECURITY_HEADERS = {
     "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
 };
 
+// iOS Safari will not play a video the server cannot seek: it opens with a
+// small probe range and abandons the element unless the answer is a 206. The
+// Asset Worker does not answer Range at all — it returns the whole 7.6 MB with
+// a 200 and no Accept-Ranges, verified both on production and under
+// `wrangler dev` — so routing the file around this Worker (which is what
+// `run_worker_first`'s negative rule used to do) does not buy byte ranges. It
+// has to be done here.
+//
+// Only a Range request pays the cost of buffering the asset, and only ranges
+// this code can answer exactly: a multi-range request falls through to the
+// normal 200, which is a legal answer to any Range and what browsers already
+// cope with.
+const RANGE_PATTERN = /^bytes=(\d*)-(\d*)$/;
+
+async function rangeResponse(assetResponse, rangeHeader) {
+  const match = RANGE_PATTERN.exec(rangeHeader.trim());
+  if (!match) return assetResponse;
+  const [, rawStart, rawEnd] = match;
+  if (rawStart === "" && rawEnd === "") return assetResponse;
+
+  const body = await assetResponse.arrayBuffer();
+  const total = body.byteLength;
+
+  // "bytes=-500" means the *last* 500 bytes, not "from 0 to 500".
+  let start;
+  let end;
+  if (rawStart === "") {
+    const suffix = Number(rawEnd);
+    if (suffix === 0) return unsatisfiable(assetResponse, total);
+    start = Math.max(0, total - suffix);
+    end = total - 1;
+  } else {
+    start = Number(rawStart);
+    end = rawEnd === "" ? total - 1 : Math.min(Number(rawEnd), total - 1);
+  }
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= total) {
+    return unsatisfiable(assetResponse, total);
+  }
+
+  const headers = new Headers(assetResponse.headers);
+  headers.set("accept-ranges", "bytes");
+  headers.set("content-range", `bytes ${start}-${end}/${total}`);
+  headers.set("content-length", String(end - start + 1));
+  // The asset's ETag describes the whole file; keeping it on a partial body
+  // would let a cache serve this slice as if it were the entire video.
+  headers.delete("etag");
+  return new Response(body.slice(start, end + 1), { status: 206, headers });
+}
+
+function unsatisfiable(assetResponse, total) {
+  const headers = new Headers(assetResponse.headers);
+  headers.set("accept-ranges", "bytes");
+  headers.set("content-range", `bytes */${total}`);
+  headers.delete("etag");
+  return new Response(null, { status: 416, headers });
+}
+
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -259,7 +316,20 @@ export default {
         ? json({ error: "internal error" }, 500)
         : page("Something went wrong — CruiseMesh", `<h1>Something went wrong.</h1><p class="lede">Please refresh in a moment, or <a href="/support/">contact support</a>.</p>`);
     }
-    return env.ASSETS.fetch(request);
+    const assetResponse = await env.ASSETS.fetch(request);
+    const range = request.headers.get("range");
+    if (range && request.method === "GET" && assetResponse.status === 200) {
+      return rangeResponse(assetResponse, range);
+    }
+    // Advertising the capability matters as much as honouring it: a player
+    // that sees no Accept-Ranges may decide up front that the file is not
+    // seekable and never ask for a range at all.
+    if (request.method === "GET" && assetResponse.status === 200) {
+      const headers = new Headers(assetResponse.headers);
+      headers.set("accept-ranges", "bytes");
+      return new Response(assetResponse.body, { status: 200, headers });
+    }
+    return assetResponse;
   },
 
   // Cron entry point for the ops jobs (wrangler.jsonc `triggers.crons`).
