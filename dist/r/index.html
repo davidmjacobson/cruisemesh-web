@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>Set up Cruise Pass</title>
-  <meta property="og:title" content="Set up Cruise Pass">
-  <meta property="og:description" content="Open this link in the CruiseMesh app to set up Cruise Pass on this phone.">
+  <title>Set up Shore Pass</title>
+  <meta property="og:title" content="Set up Shore Pass">
+  <meta property="og:description" content="Open this link in the CruiseMesh app to set up Shore Pass on this phone.">
   <meta property="og:image" content="https://cruisemesh.app/og.png">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -42,10 +42,10 @@
   </header>
   <main class="shell">
     <div class="intro">
-      <h1>Set up Cruise Pass</h1>
-      <p class="lede" id="intro">This Cruise Pass link should open directly in CruiseMesh when the app is installed.</p>
+      <h1>Set up Shore Pass</h1>
+      <p class="lede" id="intro">This Shore Pass link should open directly in CruiseMesh when the app is installed.</p>
       <div id="card-controls" hidden>
-        <div class="token" id="token" aria-label="Cruise Pass setup card"></div>
+        <div class="token" id="token" aria-label="Shore Pass setup card"></div>
         <div class="actions">
           <a class="button" id="open" href="">Open in CruiseMesh</a>
           <button class="button" id="copy" type="button">Copy setup card</button>
@@ -62,7 +62,7 @@
 
     <section>
       <h2>App installed but nothing happened?</h2>
-      <p>Open CruiseMesh, go to <strong>Settings → Cruise Pass</strong>, choose <strong>Paste card</strong> and paste the setup card above, then choose <strong>Review</strong>, then <strong>Test and use</strong>.</p>
+      <p>Open CruiseMesh, go to <strong>Settings → Shore Pass</strong>, choose <strong>Paste card</strong> and paste the setup card above, then choose <strong>Review</strong>, then <strong>Test and use</strong>.</p>
     </section>
 
     <section>
@@ -80,7 +80,7 @@
       const raw = location.hash.slice(1);
       const match = raw.match(/CMRELAY1:[A-Za-z0-9_-]+/);
       if (!match) {
-        document.querySelector("#intro").textContent = "This link does not contain a complete Cruise Pass setup card. Check your purchase email for the full setup link.";
+        document.querySelector("#intro").textContent = "This link does not contain a complete Shore Pass setup card. Check your purchase email for the full setup link.";
         return;
       }
       const token = match[0];
@@ -90,7 +90,7 @@
       armOpenButton({
         button: document.querySelector("#open"),
         notice: document.querySelector("#notice"),
-        message: "CruiseMesh did not open. On a phone, check that the app is installed and up to date, then try again — or copy the setup card and paste it in Settings → Cruise Pass.",
+        message: "CruiseMesh did not open. On a phone, check that the app is installed and up to date, then try again — or copy the setup card and paste it in Settings → Shore Pass.",
       });
       document.querySelector("#token").textContent = token;
       document.querySelector("#card-controls").hidden = false;
@@ -110,7 +110,7 @@
         const notice = document.querySelector("#notice");
         try {
           await navigator.clipboard.writeText(token);
-          notice.textContent = "Setup card copied. Open Settings → Cruise Pass in CruiseMesh and paste it.";
+          notice.textContent = "Setup card copied. Open Settings → Shore Pass in CruiseMesh and paste it.";
         } catch {
           const selection = getSelection();
           const range = document.createRange();

@@ -215,7 +215,7 @@ async function buildReconciliationReport(env) {
   }
 
   const lines = [
-    "Weekly Cruise Pass reconciliation (D1 purchases vs relay families).",
+    "Weekly Shore Pass reconciliation (D1 purchases vs relay families).",
     "",
     "URGENT — paying customers affected:",
     ...urgent.map((line) => `- ${line}`),
@@ -302,7 +302,7 @@ export async function runExpiryReminders(env) {
     try {
       await sendOpsEmail(
         env,
-        "ALERT: Cruise Pass expiry reminders failed",
+        "ALERT: Shore Pass expiry reminders failed",
         [
           `${failures.length} of ${due.length} expiring-pass reminders could not be sent at ${new Date(now).toISOString()}.`,
           "",
@@ -323,7 +323,7 @@ export async function runReconciliation(env) {
   try {
     const report = await buildReconciliationReport(env);
     if (report) {
-      await sendOpsEmail(env, "ALERT: Cruise Pass reconciliation found mismatches", report);
+      await sendOpsEmail(env, "ALERT: Shore Pass reconciliation found mismatches", report);
     }
   } catch (error) {
     // The weekly cadence is its own storm control here: a reconciliation
@@ -332,7 +332,7 @@ export async function runReconciliation(env) {
     console.error(`reconciliation failed: ${error}`);
     await sendOpsEmail(
       env,
-      "ALERT: Cruise Pass reconciliation could not run",
+      "ALERT: Shore Pass reconciliation could not run",
       `The weekly purchases <-> relay families reconciliation failed:\n\n${error}\n\nUntil this runs green, stranded (paid-but-not-provisioned) passes go undetected.`,
     );
   }

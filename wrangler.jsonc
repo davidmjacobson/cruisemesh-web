@@ -41,7 +41,7 @@
     "crons": ["*/15 * * * *", "23 14 * * 1", "7 15 * * *"]
   },
   "vars": {
-    // Stripe Price id for the Cruise Pass one-time payment (LIVE mode, on
+    // Stripe Price id for the Shore Pass one-time payment (LIVE mode, on
     // acct_1TvRdV0JgNc7Eg1G "CruiseMesh"). Must be swapped in the same breath
     // as STRIPE_SECRET_KEY — a live key with a test price id, or the reverse,
     // fails checkout with "no such price". Test price: price_1TvS7y0JgNc7Eg1GDzG9KiDc

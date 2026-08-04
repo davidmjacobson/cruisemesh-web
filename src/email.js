@@ -40,7 +40,7 @@ export async function sendExpiryReminderEmail(env, purchase, nowMs = Date.now())
   // checkout. When a renewal flow ships, the "buy a new pass" paragraph (and
   // its HTML twin) is the block that gets replaced — nothing else here does.
   const text = [
-    `Your Cruise Pass expires ${when}.`,
+    `Your Shore Pass expires ${when}.`,
     "",
     `Internet delivery stops on ${expiry}. After that date, CruiseMesh no longer carries your family's messages over the internet.`,
     "",
@@ -53,7 +53,7 @@ export async function sendExpiryReminderEmail(env, purchase, nowMs = Date.now())
 
   const html = `
     <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a222a;line-height:1.6">
-      <h1 style="font-size:1.4rem">Your Cruise Pass expires ${escapeHtml(when)}</h1>
+      <h1 style="font-size:1.4rem">Your Shore Pass expires ${escapeHtml(when)}</h1>
       <p>Internet delivery stops on <strong>${escapeHtml(expiry)}</strong>. After that date, CruiseMesh no longer carries your family's messages over the internet.</p>
       <p>Messaging nearby keeps working without a pass. Phones close to each other still reach one another over Bluetooth and local Wi-Fi, on the ship or ashore, with no internet at all.</p>
       <p>Nothing renews on its own and you will not be charged again. To keep internet delivery, buy a new pass. A new pass comes with a new setup card, and each family phone needs to be set up with that card, the same as the first time.</p>
@@ -74,7 +74,7 @@ export async function sendExpiryReminderEmail(env, purchase, nowMs = Date.now())
       from: `CruiseMesh <${env.EMAIL_FROM}>`,
       to: purchase.email,
       reply_to: "support@cruisemesh.app",
-      subject: `Your Cruise Pass expires ${when}`,
+      subject: `Your Shore Pass expires ${when}`,
       text,
       html,
     }),
@@ -95,18 +95,18 @@ export async function sendCredentialEmail(env, purchase, setupLink) {
   // use. "Test and save" is the Custom relay button and is wrong here.
   const expiry = formatExpiry(purchase.expires_ms);
   const text = [
-    "Your Cruise Pass is ready.",
+    "Your Shore Pass is ready.",
     "",
     "1. Open this link on the phone you want to set up:",
     setupLink,
     "2. Choose Review, and check the host CruiseMesh shows.",
     "3. Choose Test and use. CruiseMesh saves the pass only after that check succeeds.",
     "",
-    "If the link did not open CruiseMesh, copy the setup card (the text starting CMRELAY1:) from the end of it, then open Settings -> Cruise Pass, choose Paste card, then Review.",
+    "If the link did not open CruiseMesh, copy the setup card (the text starting CMRELAY1:) from the end of it, then open Settings -> Shore Pass, choose Paste card, then Review.",
     "",
-    "One pass covers your whole family, and each family phone needs this setup. Once the first phone is ready, use Set up another phone or Show setup QR in Settings -> Cruise Pass.",
+    "One pass covers your whole family, and each family phone needs this setup. Once the first phone is ready, use Set up another phone or Show setup QR in Settings -> Shore Pass.",
     "",
-    "Cruise Pass sets up internet delivery. It does not add contacts, and it does not share a phone's internet connection.",
+    "Shore Pass sets up internet delivery. It does not add contacts, and it does not share a phone's internet connection.",
     "",
     `Pass expires: ${expiry}`,
     "",
@@ -114,29 +114,29 @@ export async function sendCredentialEmail(env, purchase, setupLink) {
     "",
     "Need help? Reply to this email, or write to support@cruisemesh.app.",
     "",
-    "Advanced: to enter the details by hand, open Settings -> Cruise Pass -> Custom relay.",
+    "Advanced: to enter the details by hand, open Settings -> Shore Pass -> Custom relay.",
     `  Relay URL:   ${purchase.relay_url}`,
     `  Relay token: ${purchase.family_token}`,
   ].join("\n");
 
   const html = `
     <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a222a;line-height:1.6">
-      <h1 style="font-size:1.4rem">Your Cruise Pass is ready</h1>
+      <h1 style="font-size:1.4rem">Your Shore Pass is ready</h1>
       <p><a href="${escapeHtml(setupLink)}" style="display:inline-block;padding:12px 20px;border-radius:12px;background:#0d7186;color:#fff;text-decoration:none;font-weight:700">Open in CruiseMesh</a></p>
       <ol>
         <li>Tap <strong>Open in CruiseMesh</strong> above, on the phone you want to set up.</li>
         <li>Choose <strong>Review</strong>, and check the host CruiseMesh shows.</li>
         <li>Choose <strong>Test and use</strong>. CruiseMesh saves the pass only after that check succeeds.</li>
       </ol>
-      <p>If the link did not open CruiseMesh, copy the setup card (the text starting <code>CMRELAY1:</code>) from the end of it, then open <strong>Settings &rarr; Cruise Pass</strong>, choose <strong>Paste card</strong>, then <strong>Review</strong>.</p>
-      <p>One pass covers your whole family, and each family phone needs this setup. Once the first phone is ready, use <strong>Set up another phone</strong> or <strong>Show setup QR</strong> in Settings &rarr; Cruise Pass.</p>
-      <p>Cruise Pass sets up internet delivery. It does not add contacts, and it does not share a phone's internet connection.</p>
+      <p>If the link did not open CruiseMesh, copy the setup card (the text starting <code>CMRELAY1:</code>) from the end of it, then open <strong>Settings &rarr; Shore Pass</strong>, choose <strong>Paste card</strong>, then <strong>Review</strong>.</p>
+      <p>One pass covers your whole family, and each family phone needs this setup. Once the first phone is ready, use <strong>Set up another phone</strong> or <strong>Show setup QR</strong> in Settings &rarr; Shore Pass.</p>
+      <p>Shore Pass sets up internet delivery. It does not add contacts, and it does not share a phone's internet connection.</p>
       <p>Pass expires: ${escapeHtml(expiry)}</p>
       <p>Anyone with this link can use your family's internet delivery, so share it only with your own phones.</p>
       <p style="color:#556472;font-size:0.9rem">Need help? Reply to this email, or write to <a href="mailto:support@cruisemesh.app">support@cruisemesh.app</a>.</p>
       <details style="margin-top:20px">
         <summary style="color:#556472;font-size:0.9rem;cursor:pointer">Advanced: enter the details by hand</summary>
-        <p style="font-size:0.9rem">In CruiseMesh, open <strong>Settings &rarr; Cruise Pass &rarr; Custom relay</strong>.</p>
+        <p style="font-size:0.9rem">In CruiseMesh, open <strong>Settings &rarr; Shore Pass &rarr; Custom relay</strong>.</p>
         <p style="font-family:monospace;background:#f3f6f8;padding:12px;border-radius:8px;word-break:break-all;font-size:0.9rem">
           Relay URL: ${escapeHtml(purchase.relay_url)}<br>
           Relay token: ${escapeHtml(purchase.family_token)}
@@ -156,7 +156,7 @@ export async function sendCredentialEmail(env, purchase, setupLink) {
       // A buyer whose setup link failed replies to this message; send them to
       // support instead of an unwatched no-reply address.
       reply_to: "support@cruisemesh.app",
-      subject: "Your Cruise Pass is ready",
+      subject: "Your Shore Pass is ready",
       text,
       html,
     }),
