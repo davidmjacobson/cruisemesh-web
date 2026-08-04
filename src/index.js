@@ -136,7 +136,7 @@ async function handleSuccess(request, env) {
   if (!purchase) {
     return page(
       "Payment not completed — CruiseMesh",
-      `<p class="eyebrow">Cruise Pass</p>
+      `<p class="eyebrow">Shore Pass</p>
        <h1>Payment not completed.</h1>
        <p class="lede">This checkout has not finished. If you believe you were charged, contact support and we will sort it out.</p>
        <div class="actions"><a class="button" href="/pass/">Try again</a><a class="button secondary" href="/support/">Get help</a></div>`,
@@ -162,9 +162,9 @@ async function handleSuccess(request, env) {
   const setupCardJson = JSON.stringify(setupCard).replaceAll("<", "\\u003c");
 
   return page(
-    "Your Cruise Pass is ready — CruiseMesh",
-    `<p class="eyebrow">Cruise Pass</p>
-     <h1>Your Cruise Pass is ready.</h1>
+    "Your Shore Pass is ready — CruiseMesh",
+    `<p class="eyebrow">Shore Pass</p>
+     <h1>Your Shore Pass is ready.</h1>
      <p class="lede">Finish setup on a phone with CruiseMesh installed. The app shows the host, tests the connection, and saves it only after you confirm.</p>
      ${pendingNote}
      <div class="actions"><a class="button" id="open-in-app" href="${escapeHtml(appSetupLink)}">Open in CruiseMesh</a></div>
@@ -190,10 +190,10 @@ async function handleSuccess(request, env) {
      </details>
      ${emailedNote}
      <p>Pass active until <strong>${escapeHtml(formatExpiry(purchase.expires_ms))}</strong>. Anyone with this setup card can use your family's internet delivery, so share it only with your own phones.</p>
-     <p>If Cruise Pass doesn't work out on your sailing, refunds are no questions asked; see <a href="/support/">support</a>.</p>
+     <p>If Shore Pass doesn't work out on your sailing, refunds are no questions asked; see <a href="/support/">support</a>.</p>
      <details class="manual-setup">
        <summary>Custom relay details</summary>
-       <p>In CruiseMesh, open <strong>Settings → Cruise Pass → Custom relay</strong>.</p>
+       <p>In CruiseMesh, open <strong>Settings → Shore Pass → Custom relay</strong>.</p>
        <h2>Relay URL</h2>
        <div class="token">${escapeHtml(purchase.relay_url)}</div>
        <h2>Relay token</h2>
@@ -226,7 +226,7 @@ async function handleSuccess(request, env) {
        armOpenButton({
          button: document.querySelector("#open-in-app"),
          notice: document.querySelector("#open-notice"),
-         message: "CruiseMesh did not open. Check that the app is installed on this phone and up to date, then try again, or copy the setup card below and paste it in Settings → Cruise Pass. Reading this on a computer? Scan the QR code with the phone instead.",
+         message: "CruiseMesh did not open. Check that the app is installed on this phone and up to date, then try again, or copy the setup card below and paste it in Settings → Shore Pass. Reading this on a computer? Scan the QR code with the phone instead.",
        });
      </script>`,
   );

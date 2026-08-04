@@ -15,11 +15,11 @@
           },
           {
             "/": "/r",
-            "comment": "Open Cruise Pass setup links in the app"
+            "comment": "Open Shore Pass setup links in the app"
           },
           {
             "/": "/r/",
-            "comment": "Open the trailing-slash Cruise Pass fallback in the app"
+            "comment": "Open the trailing-slash Shore Pass fallback in the app"
           },
           {
             "/": "/lan",

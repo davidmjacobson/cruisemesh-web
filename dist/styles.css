@@ -297,7 +297,7 @@ section:first-of-type, .intro { margin-top: 0; padding-top: 0; border-top: 0; }
 .routes strong { display: block; font-weight: 600; }
 .routes span { color: var(--muted); }
 
-/* Free vs Cruise Pass plan cards */
+/* Free vs Shore Pass plan cards */
 .plans { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .plan {
   padding: 22px 22px 20px;

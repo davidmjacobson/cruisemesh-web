@@ -8,10 +8,10 @@ server-side friend-card processing. Friend-card payloads (`#CMFRIEND1:...`)
 and relay setup cards (`#CMRELAY1:...`) live in URL fragments, which browsers
 do not send to Cloudflare.
 
-A small Worker (`src/index.js`) additionally powers the **Cruise Pass**
+A small Worker (`src/index.js`) additionally powers the **Shore Pass**
 hosted-relay purchase flow: Stripe Checkout, the Stripe webhook, relay
 provisioning, and credential delivery. It is live and taking real payments;
-the "Cruise Pass" section below is the operator's reference for it.
+the "Shore Pass" section below is the operator's reference for it.
 
 ## Local development
 
@@ -33,7 +33,7 @@ npm run deploy
 The custom domain is declared in `wrangler.jsonc`; Cloudflare manages its DNS
 record and TLS certificate.
 
-## Cruise Pass
+## Shore Pass
 
 The purchase flow is live. What follows is what each piece is and how to
 re-establish it — on a new account, or when a credential has to be rotated.
@@ -47,7 +47,7 @@ the `/api/` endpoints simply return errors.
    npx wrangler d1 migrations apply cruisemesh-web --remote
    ```
 
-2. **Stripe** — a product ("Cruise Pass") with a one-time price, whose
+2. **Stripe** — a product ("Shore Pass") with a one-time price, whose
    `price_...` id lives in `wrangler.jsonc` under `vars.STRIPE_PRICE_ID`. The
    price id and the secret key must be swapped in the same breath: a live key
    with a test price, or the reverse, fails checkout with "no such price".

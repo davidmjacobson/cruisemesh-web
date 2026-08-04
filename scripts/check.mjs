@@ -124,7 +124,7 @@ const supportPage = await readFile("dist/support/index.html", "utf8");
 if (supportPage.includes("Settings → Internet relay")) {
   throw new Error("Support must not reference the retired Internet relay screen");
 }
-for (const requiredText of ["Settings → Cruise Pass", "Connection details", "Test and use"]) {
+for (const requiredText of ["Settings → Shore Pass", "Connection details", "Test and use"]) {
   if (!supportPage.includes(requiredText)) throw new Error(`Support must include ${requiredText}`);
 }
 for (const requiredText of ["Save and check later", "Show setup QR"]) {
@@ -327,7 +327,7 @@ if (!emailSource.includes("each family phone needs this setup")) {
   throw new Error("Credential email must explain that every family phone needs setup");
 }
 if (emailSource.includes("shared automatically through the friend cards")) {
-  throw new Error("Credential email must not imply that friend cards configure Cruise Pass");
+  throw new Error("Credential email must not imply that friend cards configure Shore Pass");
 }
 
 // The expiring-pass reminder. Passes do not renew and there is no renewal
