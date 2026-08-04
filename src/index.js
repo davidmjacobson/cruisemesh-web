@@ -193,7 +193,7 @@ async function handleSuccess(request, env) {
      <p>If Shore Pass doesn't work out on your sailing, refunds are no questions asked; see <a href="/support/">support</a>.</p>
      <details class="manual-setup">
        <summary>Custom relay details</summary>
-       <p>In CruiseMesh, open <strong>Settings → Shore Pass → Custom relay</strong>.</p>
+       <p>In CruiseMesh, open <strong>Settings → Shore Pass → Custom relay</strong> (called Cruise Pass on older app versions).</p>
        <h2>Relay URL</h2>
        <div class="token">${escapeHtml(purchase.relay_url)}</div>
        <h2>Relay token</h2>
@@ -226,7 +226,7 @@ async function handleSuccess(request, env) {
        armOpenButton({
          button: document.querySelector("#open-in-app"),
          notice: document.querySelector("#open-notice"),
-         message: "CruiseMesh did not open. Check that the app is installed on this phone and up to date, then try again, or copy the setup card below and paste it in Settings → Shore Pass. Reading this on a computer? Scan the QR code with the phone instead.",
+         message: "CruiseMesh did not open. Check that the app is installed on this phone and up to date, then try again, or copy the setup card below and paste it in Settings → Shore Pass, called Cruise Pass on older app versions. Reading this on a computer? Scan the QR code with the phone instead.",
        });
      </script>`,
   );
