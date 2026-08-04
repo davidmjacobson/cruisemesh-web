@@ -1,0 +1,23 @@
+# Git on Windows runs with core.autocrlf=true, which rewrites CRLF to LF on
+# commit for anything it guesses is text. It guessed wrong about the explainer
+# video and the two PNGs: committing them stripped every 0x0D that happened to
+# precede an 0x0A inside the compressed data, silently corrupting all three
+# (the mp4 lost 135 bytes and would no longer play). Nothing caught it, because
+# the diff of a binary file reads only "Bin 7656856 -> 7656721 bytes".
+#
+# Order matters: the last matching line wins for a given attribute, so the
+# catch-all goes first and the binary rules override it. Add new binary
+# extensions below, in the same breath as the first such file.
+* text=auto
+
+*.mp4 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.zip binary
