@@ -409,6 +409,50 @@ for (const image of ["dist/og.png", "dist/apple-touch-icon.png", "dist/icon.svg"
   await readFile(image);
 }
 
+// Binary assets must survive the trip through git. With no .gitattributes and
+// core.autocrlf=true, committing the explainer video from a Windows checkout
+// stripped every CR that preceded an LF inside the compressed stream — 135 of
+// them — and shipped a file no player would open. A binary diff reads only
+// "Bin 7656856 -> 7656721 bytes", so nothing flagged it; the .gitattributes
+// added alongside this check is the actual fix, and this is the tripwire that
+// tells us if it ever stops working.
+//
+// Walking the top-level MP4 box structure catches the general failure: any
+// truncation or dropped byte desynchronises the length prefixes, so the walk
+// lands somewhere other than exactly the end of the file.
+const video = await readFile("dist/cruisemesh-explainer.mp4");
+if (video.readUInt32BE(4) !== 0x66747970) {
+  throw new Error("Explainer video does not begin with an MP4 ftyp box — the file is corrupt");
+}
+const boxes = [];
+for (let offset = 0; offset < video.length; ) {
+  const size = video.readUInt32BE(offset);
+  boxes.push(video.toString("latin1", offset + 4, offset + 8));
+  if (size < 8) {
+    throw new Error(`Explainer video has a ${size}-byte MP4 box at offset ${offset} — the file is corrupt`);
+  }
+  offset += size;
+  if (offset > video.length) {
+    throw new Error("Explainer video's MP4 boxes overrun the end of the file — it is truncated or corrupt");
+  }
+}
+// Without moov a player has no index and iOS Safari shows a black frame.
+if (!boxes.includes("moov")) {
+  throw new Error(`Explainer video is missing its moov atom (found: ${boxes.join(", ")})`);
+}
+// CR-stripping only ever shrinks a file, and it hits PNGs too.
+for (const [image, expected] of [["dist/og.png", 0x89504e47], ["dist/apple-touch-icon.png", 0x89504e47]]) {
+  const bytes = await readFile(image);
+  if (bytes.readUInt32BE(0) !== expected) {
+    throw new Error(`${image} does not begin with a PNG signature — the file is corrupt`);
+  }
+  // A PNG closes with length(4) + "IEND" + CRC(4), so the marker is the four
+  // bytes before the final four, not the last four.
+  if (bytes.toString("latin1", bytes.length - 8, bytes.length - 4) !== "IEND") {
+    throw new Error(`${image} does not end with an IEND chunk — it is truncated or corrupt`);
+  }
+}
+
 const redirect = redirectWorker.fetch(new Request("https://cruisemesh.com/f?source=short-domain"));
 if (redirect.status !== 308) {
   throw new Error("Short domain must use a permanent 308 redirect");
