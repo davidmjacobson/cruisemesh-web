@@ -32,13 +32,24 @@ export function daysUntil(expiresMs, nowMs) {
   return `in ${days} days`;
 }
 
-export async function sendExpiryReminderEmail(env, purchase, nowMs = Date.now()) {
+export async function sendExpiryReminderEmail(env, purchase, nowMs = Date.now(), renewUrl = null) {
   const expiry = formatExpiry(purchase.expires_ms);
   const when = daysUntil(purchase.expires_ms, nowMs);
-  // RENEWAL COPY: passes do not renew, and there is no renewal endpoint, so
-  // this says plainly that nothing happens on its own and points at a fresh
-  // checkout. When a renewal flow ships, the "buy a new pass" paragraph (and
-  // its HTML twin) is the block that gets replaced — nothing else here does.
+  // RENEWAL COPY: a renewal keeps the pass the family already has, so the one
+  // thing it must say that buying again cannot is "nothing to set up". Both
+  // variants still open with "nothing renews on its own", because that stays
+  // true either way — renewing is a payment the buyer chooses, not a
+  // subscription. Without RENEW_LINK_SECRET no link can be signed, so the
+  // email falls back to the buy-another-pass paragraph rather than offering
+  // something this site could not honour.
+  const keepGoing = renewUrl
+    ? `Nothing renews on its own and you will not be charged again. To keep internet delivery, renew your pass at ${renewUrl}. Renewing keeps the setup card your phones already have, so there is nothing to set up again on any of them: it is the same one-time price, and it adds 30 days to the date above. The link works for 45 days, including after that date.`
+    : `Nothing renews on its own and you will not be charged again. To keep internet delivery, buy a new pass at ${PURCHASE_URL}. A new pass comes with a new setup card, and each family phone needs to be set up with that card, the same as the first time.`;
+  const keepGoingHtml = renewUrl
+    ? `<p>Nothing renews on its own and you will not be charged again. Renewing keeps the setup card your phones already have, so there is nothing to set up again on any of them: it is the same one-time price, and it adds 30 days to the date above. The link works for 45 days, including after that date.</p>
+      <p><a href="${escapeHtml(renewUrl)}" style="display:inline-block;padding:12px 20px;border-radius:12px;background:#0d7186;color:#fff;text-decoration:none;font-weight:700">Renew your pass</a></p>`
+    : `<p>Nothing renews on its own and you will not be charged again. To keep internet delivery, buy a new pass. A new pass comes with a new setup card, and each family phone needs to be set up with that card, the same as the first time.</p>
+      <p><a href="${PURCHASE_URL}" style="display:inline-block;padding:12px 20px;border-radius:12px;background:#0d7186;color:#fff;text-decoration:none;font-weight:700">Buy a new pass</a></p>`;
   const text = [
     `Your Shore Pass expires ${when}.`,
     "",
@@ -46,7 +57,7 @@ export async function sendExpiryReminderEmail(env, purchase, nowMs = Date.now())
     "",
     "Messaging nearby keeps working without a pass. Phones close to each other still reach one another over Bluetooth and local Wi-Fi, on the ship or ashore, with no internet at all.",
     "",
-    `Nothing renews on its own and you will not be charged again. To keep internet delivery, buy a new pass at ${PURCHASE_URL}. A new pass comes with a new setup card, and each family phone needs to be set up with that card, the same as the first time.`,
+    keepGoing,
     "",
     "Need help? Reply to this email, or write to support@cruisemesh.app.",
   ].join("\n");
@@ -56,8 +67,7 @@ export async function sendExpiryReminderEmail(env, purchase, nowMs = Date.now())
       <h1 style="font-size:1.4rem">Your Shore Pass expires ${escapeHtml(when)}</h1>
       <p>Internet delivery stops on <strong>${escapeHtml(expiry)}</strong>. After that date, CruiseMesh no longer carries your family's messages over the internet.</p>
       <p>Messaging nearby keeps working without a pass. Phones close to each other still reach one another over Bluetooth and local Wi-Fi, on the ship or ashore, with no internet at all.</p>
-      <p>Nothing renews on its own and you will not be charged again. To keep internet delivery, buy a new pass. A new pass comes with a new setup card, and each family phone needs to be set up with that card, the same as the first time.</p>
-      <p><a href="${PURCHASE_URL}" style="display:inline-block;padding:12px 20px;border-radius:12px;background:#0d7186;color:#fff;text-decoration:none;font-weight:700">Buy a new pass</a></p>
+      ${keepGoingHtml}
       <p style="color:#556472;font-size:0.9rem">Need help? Reply to this email, or write to <a href="mailto:support@cruisemesh.app">support@cruisemesh.app</a>.</p>
     </div>`;
 
@@ -84,6 +94,51 @@ export async function sendExpiryReminderEmail(env, purchase, nowMs = Date.now())
   // the next daily run, rather than recording a reminder that never landed.
   if (!response.ok) {
     throw new Error(`Resend rejected the expiry reminder (HTTP ${response.status}): ${await response.text()}`);
+  }
+}
+
+// Confirms a renewal to the address already on file (src/fulfill.js). It
+// carries no setup card and no token: the family's phones keep the pass they
+// have, so re-sending a live credential would be for no reason at all. The new
+// date is the whole message.
+export async function sendRenewalEmail(env, purchase) {
+  const expiry = formatExpiry(purchase.expires_ms);
+  const subject = `Your Shore Pass now runs to ${expiry}`;
+  const text = [
+    "Thank you — your Shore Pass is renewed.",
+    "",
+    `Internet delivery now runs to ${expiry}.`,
+    "",
+    "There is nothing to set up. Every phone in your family keeps the pass it already has, and messages carry on going out over the internet as before.",
+    "",
+    "Need help? Reply to this email, or write to support@cruisemesh.app.",
+  ].join("\n");
+
+  const html = `
+    <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;color:#1a222a;line-height:1.6">
+      <h1 style="font-size:1.4rem">Your Shore Pass is renewed</h1>
+      <p>Internet delivery now runs to <strong>${escapeHtml(expiry)}</strong>.</p>
+      <p>There is nothing to set up. Every phone in your family keeps the pass it already has, and messages carry on going out over the internet as before.</p>
+      <p style="color:#556472;font-size:0.9rem">Need help? Reply to this email, or write to <a href="mailto:support@cruisemesh.app">support@cruisemesh.app</a>.</p>
+    </div>`;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      from: `CruiseMesh <${env.EMAIL_FROM}>`,
+      to: purchase.email,
+      reply_to: "support@cruisemesh.app",
+      subject,
+      text,
+      html,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Resend rejected the renewal confirmation (HTTP ${response.status}): ${await response.text()}`);
   }
 }
 
