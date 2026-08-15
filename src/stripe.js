@@ -54,6 +54,22 @@ export function createCheckoutSession(env, origin) {
   });
 }
 
+// A renewal is the same product at the same price: no new Stripe price, no
+// subscription, nothing to change in the dashboard. The only differences are
+// `metadata[renewal_of]` — the whole contract fulfillment reads to know it
+// must extend an existing family token rather than mint one — and a success
+// page that never renders credentials the buyer's phones already hold.
+export function createRenewalCheckoutSession(env, origin, priorSessionId) {
+  return stripeRequest(env, "POST", "/checkout/sessions", {
+    mode: "payment",
+    "line_items[0]": { price: env.STRIPE_PRICE_ID, quantity: 1 },
+    allow_promotion_codes: true,
+    metadata: { renewal_of: priorSessionId },
+    success_url: `${origin}/relay/renewed?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/pass/?canceled=1`,
+  });
+}
+
 export function getCheckoutSession(env, sessionId) {
   return stripeRequest(env, "GET", `/checkout/sessions/${encodeURIComponent(sessionId)}`);
 }

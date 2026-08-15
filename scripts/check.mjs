@@ -383,16 +383,18 @@ if (emailSource.includes("shared automatically through the friend cards")) {
   throw new Error("Credential email must not imply that friend cards configure Shore Pass");
 }
 
-// The expiring-pass reminder. Passes do not renew and there is no renewal
-// endpoint, so the reminder may never imply one: a buyer told their pass
-// renews would sail with nothing. It also has to say what still works
-// without a pass, or the email reads as "CruiseMesh stops working".
+// The expiring-pass reminder. Renewing is now possible, but only as a payment
+// the buyer chooses: nothing bills them on its own, and a buyer who believed
+// otherwise would sail with nothing. The email also has to say what still
+// works without a pass, or it reads as "CruiseMesh stops working". The
+// purchase page stays in the source as the fallback for a reminder sent while
+// no renewal link can be signed.
 if (!emailSource.includes("https://cruisemesh.app/pass/")) {
-  throw new Error("Expiry reminder must link the real purchase page");
+  throw new Error("Expiry reminder must keep the purchase page as its fallback");
 }
-for (const banned of ["renew your pass", "renews automatically", "auto-renew", "Renew now"]) {
+for (const banned of ["renews automatically", "auto-renew", "renews itself", "charged automatically"]) {
   if (emailSource.toLowerCase().includes(banned.toLowerCase())) {
-    throw new Error(`Expiry reminder must not promise a renewal flow that does not exist ("${banned}")`);
+    throw new Error(`Expiry reminder must not imply automatic billing ("${banned}")`);
   }
 }
 for (const requiredText of ["Nothing renews on its own", "Bluetooth and local Wi-Fi", "each family phone needs to be set up"]) {
@@ -415,6 +417,375 @@ if (!opsSource.includes("expiry_reminded_for_ms")) {
 }
 if (!(await readFile("migrations/0003_expiry_reminder.sql", "utf8")).includes("expiry_reminded_for_ms")) {
   throw new Error("migrations must add the expiry_reminded_for_ms column src/ops.js writes");
+}
+if (!(await readFile("migrations/0004_renewals.sql", "utf8")).includes("renewal_of")) {
+  throw new Error("migrations must add the renewal_of column fulfillment writes");
+}
+
+// --- Renewals --------------------------------------------------------------
+
+const { signRenewToken, verifyRenewToken, renewLink, RENEW_LINK_TTL_MS } = await import("../src/renew.js");
+const { fulfillCheckoutSession } = await import("../src/fulfill.js");
+const { runExpiryReminders } = await import("../src/ops.js");
+
+// Renewal links are signed with RENEW_LINK_SECRET. They are not credentials,
+// but they do decide which purchase a checkout attaches to, so a stranger must
+// not be able to invent one, edit the purchase out of one, or use one forever.
+{
+  const secret = "renew-secret";
+  const issued = Date.UTC(2026, 8, 1);
+  const token = await signRenewToken(secret, "cs_prior", issued);
+
+  if (RENEW_LINK_TTL_MS !== 45 * day) {
+    throw new Error("Renewal links are described to the buyer as lasting 45 days");
+  }
+  if ((await verifyRenewToken(secret, token, issued + 1000)) !== "cs_prior") {
+    throw new Error("A freshly signed renewal link must verify");
+  }
+  // The reminder goes out days before expiry and people read email late, so a
+  // link found a month after the pass lapsed still has to work.
+  if ((await verifyRenewToken(secret, token, issued + 40 * day)) !== "cs_prior") {
+    throw new Error("A renewal link must outlive the pass it renews");
+  }
+  if ((await verifyRenewToken(secret, token, issued + RENEW_LINK_TTL_MS + 1)) !== null) {
+    throw new Error("An expired renewal link must not verify");
+  }
+  if ((await verifyRenewToken("a-different-secret", token, issued + 1000)) !== null) {
+    throw new Error("A renewal link signed with another secret must not verify");
+  }
+  const [payload, signature] = token.split(".");
+  const swapped = Buffer.from(
+    JSON.stringify({ v: 1, s: "cs_someone_elses_purchase", iat: issued, exp: issued + RENEW_LINK_TTL_MS }),
+  ).toString("base64url");
+  if ((await verifyRenewToken(secret, `${swapped}.${signature}`, issued + 1000)) !== null) {
+    throw new Error("Editing the purchase out of a renewal link must not verify");
+  }
+  const flipped = signature.slice(0, -1) + (signature.endsWith("A") ? "B" : "A");
+  if ((await verifyRenewToken(secret, `${payload}.${flipped}`, issued + 1000)) !== null) {
+    throw new Error("A renewal link with a changed signature must not verify");
+  }
+  for (const nonsense of ["", "abc", "abc.", ".abc", "not-a-token", `${payload}.`]) {
+    if ((await verifyRenewToken(secret, nonsense, issued + 1000)) !== null) {
+      throw new Error(`A malformed renewal link must not verify (${nonsense})`);
+    }
+  }
+  if ((await verifyRenewToken(undefined, token, issued + 1000)) !== null) {
+    throw new Error("With no signing secret configured, no renewal link may verify");
+  }
+  if (!(await renewLink("https://cruisemesh.app", secret, "cs_prior", issued)).startsWith("https://cruisemesh.app/renew?t=")) {
+    throw new Error("Renewal links must point at /renew on the live site");
+  }
+}
+
+// A stand-in for the purchases table: enough of D1's prepare/bind/first/all/run
+// shape to run the reminder cron, the renew endpoint and fulfillment for real,
+// against rows this file controls.
+function purchasesDb(rows) {
+  return {
+    prepare(sql) {
+      const bound = { params: [] };
+      const find = (sessionId) => rows.find((row) => row.session_id === sessionId);
+      return {
+        bind(...params) {
+          bound.params = params;
+          return this;
+        },
+        first: async () => find(bound.params[0]) ?? null,
+        all: async () => {
+          if (!sql.includes("WHERE status = 'active'")) return { results: rows.slice() };
+          const [from, to] = bound.params;
+          return {
+            results: rows.filter(
+              (row) =>
+                row.status === "active" &&
+                row.email &&
+                row.provisioned_ms &&
+                row.expires_ms > from &&
+                row.expires_ms <= to &&
+                row.expiry_reminded_for_ms !== row.expires_ms,
+            ),
+          };
+        },
+        run: async () => {
+          if (sql.includes("INSERT INTO purchases")) {
+            const [session_id, customer_id, email, family_token, relay_url, plan, created_ms, expires_ms, renewal_of] =
+              bound.params;
+            if (find(session_id)) return { meta: { changes: 0 } };
+            rows.push({
+              session_id, customer_id, email, family_token, relay_url, plan, created_ms, expires_ms, renewal_of,
+              status: "active", provisioned_ms: null, email_sent_ms: null, expiry_reminded_for_ms: null,
+            });
+            return { meta: { changes: 1 } };
+          }
+          // The reminder's claim and its release, which bind their session id
+          // in different positions.
+          if (sql.includes("expiry_reminded_for_ms IS NOT ?1")) {
+            const [expires, sessionId] = bound.params;
+            const row = find(sessionId);
+            if (!row || row.expires_ms !== expires || row.expiry_reminded_for_ms === expires) {
+              return { meta: { changes: 0 } };
+            }
+            row.expiry_reminded_for_ms = expires;
+            return { meta: { changes: 1 } };
+          }
+          if (sql.includes("expiry_reminded_for_ms IS ?3")) {
+            const row = find(bound.params[1]);
+            if (row) row.expiry_reminded_for_ms = bound.params[0];
+            return { meta: { changes: 1 } };
+          }
+          const row = find(bound.params[bound.params.length - 1]);
+          if (!row) return { meta: { changes: 0 } };
+          for (const column of ["provisioned_ms", "email_sent_ms"]) {
+            if (sql.includes(`${column} = NULL`)) {
+              row[column] = null;
+              return { meta: { changes: 1 } };
+            }
+            if (sql.includes(`${column} = ?1`)) {
+              if (row[column]) return { meta: { changes: 0 } };
+              row[column] = bound.params[0];
+              return { meta: { changes: 1 } };
+            }
+          }
+          throw new Error(`the purchases stub does not understand: ${sql}`);
+        },
+      };
+    },
+  };
+}
+
+// The reminder is the only place a renewal link is ever handed out, so the link
+// it carries has to be one this site would honour — and the email still has to
+// go out, with its buy-another-pass copy, before the secret exists.
+for (const secret of ["reminder-secret", undefined]) {
+  const rows = [
+    {
+      session_id: "cs_due",
+      status: "active",
+      email: "buyer@example.test",
+      expires_ms: Date.now() + 2 * day,
+      provisioned_ms: 1,
+      expiry_reminded_for_ms: null,
+    },
+  ];
+  const sends = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    sends.push(JSON.parse(init.body));
+    return new Response("{}", { status: 200 });
+  };
+  try {
+    const env = {
+      DB: purchasesDb(rows),
+      RESEND_API_KEY: "test-key",
+      EMAIL_FROM: "pass@cruisemesh.app",
+      RENEW_LINK_SECRET: secret,
+    };
+    await runExpiryReminders(env);
+    await runExpiryReminders(env); // the same pass, the next day
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  if (sends.length !== 1) {
+    throw new Error(`One reminder per pass, whatever the renewal setup; sent ${sends.length}`);
+  }
+  const [reminder] = sends;
+  // The token is payload.signature, so the capture stops at the sentence's
+  // full stop rather than swallowing it.
+  const linked = new RegExp("https://cruisemesh[.]app/renew[?]t=([A-Za-z0-9_-]+[.][A-Za-z0-9_-]+)").exec(reminder.text);
+  if (secret) {
+    if (!linked) throw new Error("With a signing secret set, the reminder must carry a renewal link");
+    if ((await verifyRenewToken(secret, linked[1])) !== "cs_due") {
+      throw new Error("The renewal link in the reminder must verify back to that purchase");
+    }
+    if (!reminder.html.includes("Renew your pass")) {
+      throw new Error("The reminder's button must offer the renewal, not a second pass");
+    }
+  } else {
+    if (linked) throw new Error("With no signing secret, the reminder must not link a renewal it cannot sign");
+    if (!reminder.text.includes("https://cruisemesh.app/pass/")) {
+      throw new Error("Without a renewal link, the reminder must fall back to the purchase page");
+    }
+  }
+}
+
+// Following a renewal link must never reveal whether a purchase exists. The
+// signature stops strangers minting links at all; this is the second line — a
+// valid link naming a purchase that is not there answers exactly like a link
+// that was never valid.
+{
+  const secret = "renew-secret";
+  const rows = [{ session_id: "cs_known", status: "active", email: "buyer@example.test" }];
+  const env = {
+    DB: purchasesDb(rows),
+    ASSETS: stubAssets,
+    RENEW_LINK_SECRET: secret,
+    STRIPE_PRICE_ID: "price_test",
+    STRIPE_SECRET_KEY: "sk_test",
+  };
+  const stripeCalls = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    stripeCalls.push({ url: String(url), body: init?.body ?? "" });
+    return new Response(JSON.stringify({ id: "cs_new", url: "https://checkout.stripe.test/session" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+  let known;
+  let unknown;
+  let garbage;
+  try {
+    const call = (t) => worker.fetch(new Request(`https://cruisemesh.app/renew?t=${t}`), env);
+    known = await call(await signRenewToken(secret, "cs_known"));
+    unknown = await call(await signRenewToken(secret, "cs_never_existed"));
+    garbage = await call("not-a-real-token");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  if (known.status !== 303 || known.headers.get("location") !== "https://checkout.stripe.test/session") {
+    throw new Error("A good renewal link must send the buyer straight to checkout");
+  }
+  if (unknown.status !== garbage.status) {
+    throw new Error("An unknown purchase must not be distinguishable by status code");
+  }
+  const [unknownBody, garbageBody] = [await unknown.text(), await garbage.text()];
+  if (unknownBody !== garbageBody) {
+    throw new Error("An unknown purchase must not be distinguishable by response body");
+  }
+  if (!unknownBody.includes("This renewal link no longer works")) {
+    throw new Error("A dead renewal link must get the friendly page, not an error");
+  }
+  if (stripeCalls.length !== 1) {
+    throw new Error("Only a renewal link naming a live purchase may open a checkout");
+  }
+  // The contract fulfillment reads: renewal metadata and the same price id.
+  if (!stripeCalls[0].body.includes("metadata%5Brenewal_of%5D=cs_known")) {
+    throw new Error("A renewal checkout must carry metadata[renewal_of] naming the prior purchase");
+  }
+  if (!stripeCalls[0].body.includes("price_test")) {
+    throw new Error("A renewal must check out at the same one-time price as a first purchase");
+  }
+}
+
+// Renewal fulfillment. The token is reused only while the prior pass is still
+// active *at webhook time* — it can be refunded while the buyer is on the
+// Stripe page — and the new expiry runs from the later of now and the old one.
+const renewalToken = "f".repeat(64);
+function priorPurchase(status, expiresMs) {
+  return [
+    {
+      session_id: "cs_prior",
+      status,
+      email: "onfile@example.test",
+      family_token: renewalToken,
+      relay_url: "https://relay.cruisemesh.app",
+      expires_ms: expiresMs,
+      provisioned_ms: 1,
+      email_sent_ms: 1,
+      expiry_reminded_for_ms: null,
+    },
+  ];
+}
+
+async function fulfilRenewal(rows) {
+  const provisioned = [];
+  const emails = [];
+  const env = {
+    DB: purchasesDb(rows),
+    RELAY_URL: "https://relay.cruisemesh.app",
+    RELAY_ADMIN_ORIGIN: "https://relay.cruisemesh.app",
+    RELAY_ADMIN_TOKEN: "admin",
+    RESEND_API_KEY: "test-key",
+    EMAIL_FROM: "pass@cruisemesh.app",
+    STRIPE_SECRET_KEY: "sk_test",
+  };
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    const target = String(url);
+    if (target.startsWith("https://api.stripe.com/")) {
+      return new Response(
+        JSON.stringify({
+          id: "cs_renewal",
+          payment_status: "paid",
+          customer: null,
+          // Whatever address the buyer types into Stripe Checkout is ignored
+          // on the renewal path; only the address on file is ever mailed.
+          customer_details: { email: "typed-in-checkout@example.test" },
+          metadata: { renewal_of: "cs_prior" },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }
+    if (target.endsWith("/admin/families")) {
+      provisioned.push(JSON.parse(init.body));
+      return new Response("{}", { status: 200 });
+    }
+    emails.push(JSON.parse(init.body));
+    return new Response("{}", { status: 200 });
+  };
+  try {
+    const purchase = await fulfillCheckoutSession(env, "cs_renewal");
+    // Stripe retries the webhook, and the success page calls the same code.
+    await fulfillCheckoutSession(env, "cs_renewal");
+    await fulfillCheckoutSession(env, "cs_renewal");
+    return { purchase, provisioned, emails };
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+}
+
+for (const scenario of ["early", "lapsed"]) {
+  const now = Date.now();
+  const priorExpiry = scenario === "early" ? now + 3 * day : now - 10 * day;
+  const { purchase, provisioned, emails } = await fulfilRenewal(priorPurchase("active", priorExpiry));
+
+  if (purchase.family_token !== renewalToken) {
+    throw new Error("A renewal must keep the family's existing token, or every phone needs setting up again");
+  }
+  if (purchase.renewal_of !== "cs_prior") {
+    throw new Error("A renewal row must record which purchase it renews");
+  }
+  const expected = (scenario === "early" ? priorExpiry : now) + 30 * day;
+  if (Math.abs(purchase.expires_ms - expected) > 60_000) {
+    throw new Error(`A ${scenario} renewal must extend from the later of now and the old expiry`);
+  }
+  if (provisioned.length !== 1 || provisioned[0].token !== renewalToken) {
+    throw new Error("A renewal must re-provision the same token exactly once");
+  }
+  if (provisioned[0].expires_ms !== purchase.expires_ms) {
+    throw new Error("The relay must be given the renewed expiry");
+  }
+  if (emails.length !== 1) {
+    throw new Error(`Webhook retries must not re-send the renewal confirmation (sent ${emails.length})`);
+  }
+  if (emails[0].to !== "onfile@example.test") {
+    throw new Error("A renewal may only ever email the address already on file");
+  }
+  // The phones already hold the credential; re-sending it, or drawing it on a
+  // page, would put a live credential back in the open for no reason.
+  for (const field of [emails[0].text, emails[0].html, emails[0].subject]) {
+    if (field.includes(renewalToken.slice(0, 16)) || field.includes("CMRELAY1:")) {
+      throw new Error("A renewal confirmation must not carry the family token or a setup card");
+    }
+  }
+}
+
+// A pass refunded or suspended between checkout and webhook must not have its
+// token revived. The customer has paid, so they get an ordinary new pass.
+{
+  const { purchase, provisioned, emails } = await fulfilRenewal(priorPurchase("refunded", Date.now() + 3 * day));
+  if (purchase.family_token === renewalToken) {
+    throw new Error("A renewal of a pass that is no longer active must not revive its token");
+  }
+  if (purchase.renewal_of !== null) {
+    throw new Error("With no live pass to extend, the purchase is an ordinary new pass, not a renewal");
+  }
+  if (provisioned.length !== 1 || provisioned[0].token === renewalToken) {
+    throw new Error("The relay must be given the new token, never the revoked one");
+  }
+  if (emails.length !== 1 || !emails[0].text.includes("CMRELAY1:")) {
+    throw new Error("A pass issued this way must still deliver its own setup card");
+  }
 }
 
 async function listFiles(directory) {

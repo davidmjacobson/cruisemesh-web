@@ -59,6 +59,11 @@
   //   STRIPE_SECRET_KEY     - Stripe API secret key
   //   STRIPE_WEBHOOK_SECRET - signing secret of the Stripe webhook endpoint
   //   RELAY_ADMIN_TOKEN     - bearer token for the relayd admin API
+  //   RENEW_LINK_SECRET     - HMAC key for the signed renewal links in the
+  //                           expiry-reminder email (src/renew.js). Its own
+  //                           secret, never the Stripe webhook secret. While
+  //                           it is unset the reminder still goes out and
+  //                           points at /pass/ instead of offering a renewal.
   //   RESEND_API_KEY        - Resend API key; credential emails are skipped
   //                           entirely while it is unset
   "d1_databases": [

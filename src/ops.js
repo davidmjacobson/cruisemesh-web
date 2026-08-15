@@ -7,6 +7,7 @@
 // through to the uptime probe).
 
 import { sendExpiryReminderEmail } from "./email.js";
+import { renewLink } from "./renew.js";
 
 export const UPTIME_CRON = "*/15 * * * *";
 export const RECONCILE_CRON = "23 14 * * 1"; // Mondays 14:23 UTC
@@ -277,7 +278,13 @@ export async function runExpiryReminders(env) {
         .run();
       if (claim.meta.changes === 0) continue; // a concurrent run got there first
       try {
-        await sendExpiryReminderEmail(env, purchase, now);
+        // The renewal link is signed with RENEW_LINK_SECRET. Until that secret
+        // is set nothing can be signed, so the reminder still goes out with
+        // its buy-another-pass copy rather than a link this site would refuse.
+        const renewUrl = env.RENEW_LINK_SECRET
+          ? await renewLink("https://cruisemesh.app", env.RENEW_LINK_SECRET, purchase.session_id, now)
+          : null;
+        await sendExpiryReminderEmail(env, purchase, now, renewUrl);
         sent += 1;
       } catch (error) {
         await env.DB.prepare(

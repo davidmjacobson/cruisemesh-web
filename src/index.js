@@ -1,4 +1,5 @@
-import { createCheckoutSession, verifyStripeSignature } from "./stripe.js";
+import { createCheckoutSession, createRenewalCheckoutSession, verifyStripeSignature } from "./stripe.js";
+import { verifyRenewToken } from "./renew.js";
 import { relaySetupLink } from "./relay.js";
 import { fulfillCheckoutSession } from "./fulfill.js";
 import { escapeHtml, formatExpiry } from "./email.js";
@@ -179,6 +180,85 @@ async function handleStripeWebhook(request, env) {
   return json({ received: true });
 }
 
+// One page for every way a renewal link can fail to work: bad or tampered
+// signature, expired link, a purchase that is no longer there or no longer
+// active, or the signing secret not being configured yet. Same bytes and same
+// status in every case, so following a link can never tell a stranger whether
+// a given checkout session exists. It reads as an ordinary dead link rather
+// than an error, because the commonest cause is simply an old email.
+function renewLinkUnusablePage() {
+  return page(
+    "Renewal link — CruiseMesh",
+    `<p class="eyebrow">Shore Pass</p>
+     <h1>This renewal link no longer works.</h1>
+     <p class="lede">Renewal links work for 45 days after they are sent. You can still buy a pass the usual way; that one comes with a new setup card for your phones.</p>
+     <div class="actions"><a class="button" href="/pass/">Buy a pass</a><a class="button secondary" href="/support/">Get help</a></div>`,
+  );
+}
+
+// GET /renew?t=<signed token>. Starts a checkout for the same one-time price,
+// tagged with the prior session id. Nothing about the family is shown here and
+// nothing is taken from the caller beyond the token: no email field, no
+// session id in the clear, no setup card. A renewal never re-delivers a
+// credential, because the phones already hold it.
+async function handleRenew(request, env) {
+  const url = new URL(request.url);
+  const priorSessionId = await verifyRenewToken(env.RENEW_LINK_SECRET, url.searchParams.get("t"));
+  if (!priorSessionId) return renewLinkUnusablePage();
+  const prior = await env.DB.prepare("SELECT session_id, status FROM purchases WHERE session_id = ?1")
+    .bind(priorSessionId)
+    .first();
+  // A refunded or otherwise non-active purchase is not renewable, and answers
+  // exactly like a link that never named a real purchase at all. Fulfillment
+  // checks this again when the payment lands.
+  if (!prior || prior.status !== "active") return renewLinkUnusablePage();
+  const session = await createRenewalCheckoutSession(env, url.origin, prior.session_id);
+  return new Response(null, {
+    status: 303,
+    headers: { ...SECURITY_HEADERS, location: session.url, "cache-control": "no-store" },
+  });
+}
+
+// Where a paid renewal lands. Deliberately not the ordinary success page: it
+// confirms the new date and nothing else, so no credential is drawn in a
+// browser that did not need it.
+function renewedPage(purchase) {
+  return page(
+    "Shore Pass renewed — CruiseMesh",
+    `<p class="eyebrow">Shore Pass</p>
+     <h1>Your pass is renewed.</h1>
+     <p class="lede">Internet delivery now runs to <strong>${escapeHtml(formatExpiry(purchase.expires_ms))}</strong>. There is nothing to set up: every phone in your family keeps the pass it already has.</p>
+     <p>A confirmation is on its way to the email address the pass was bought with.</p>
+     <div class="actions"><a class="button secondary" href="/support/">Get help</a></div>`,
+  );
+}
+
+async function handleRenewed(request, env) {
+  const url = new URL(request.url);
+  const sessionId = url.searchParams.get("session_id");
+  if (!sessionId) {
+    return new Response(null, {
+      status: 302,
+      headers: { ...SECURITY_HEADERS, location: `${url.origin}/pass/` },
+    });
+  }
+  const purchase = await fulfillCheckoutSession(env, sessionId);
+  if (!purchase) return renewLinkUnusablePage();
+  // A first purchase that somehow arrives here still needs its credentials, so
+  // hand it to the ordinary success page rather than showing a renewal
+  // confirmation for a pass nobody has set up yet.
+  if (!purchase.renewal_of) {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        ...SECURITY_HEADERS,
+        location: `${url.origin}/relay/success?session_id=${encodeURIComponent(sessionId)}`,
+      },
+    });
+  }
+  return renewedPage(purchase);
+}
+
 async function handleSuccess(request, env) {
   const url = new URL(request.url);
   const sessionId = url.searchParams.get("session_id");
@@ -199,6 +279,12 @@ async function handleSuccess(request, env) {
        <div class="actions"><a class="button" href="/pass/">Try again</a><a class="button secondary" href="/support/">Get help</a></div>`,
     );
   }
+
+  // Belt and braces: a renewal has its own success URL, but nothing stops
+  // someone pointing a renewal session id at this one. A renewal must never
+  // put the family token back on a screen, so it gets the confirmation page
+  // here too.
+  if (purchase.renewal_of) return renewedPage(purchase);
 
   const setupLink = relaySetupLink(url.origin, purchase.relay_url, purchase.family_token);
   const setupCard = setupLink.slice(setupLink.indexOf("#") + 1);
@@ -310,6 +396,8 @@ export default {
       if (url.pathname === "/api/checkout" && request.method === "POST") return await handleCheckout(request, env);
       if (url.pathname === "/api/stripe/webhook" && request.method === "POST") return await handleStripeWebhook(request, env);
       if (url.pathname === "/relay/success" && request.method === "GET") return await handleSuccess(request, env);
+      if (url.pathname === "/renew" && request.method === "GET") return await handleRenew(request, env);
+      if (url.pathname === "/relay/renewed" && request.method === "GET") return await handleRenewed(request, env);
     } catch (error) {
       console.error(`${request.method} ${url.pathname} failed: ${error}`);
       return url.pathname.startsWith("/api/")

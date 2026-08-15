@@ -18,5 +18,6 @@ Allow: /
 Disallow: /f/
 Disallow: /r/
 Disallow: /relay/
+Disallow: /renew
 
 Sitemap: https://cruisemesh.app/sitemap.xml
