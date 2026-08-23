@@ -517,6 +517,14 @@ function purchasesDb(rows) {
             });
             return { meta: { changes: 1 } };
           }
+          // Renewal retiring the prior row's pending reminder for a date the
+          // renewal just moved.
+          if (sql.includes("SET expiry_reminded_for_ms = expires_ms")) {
+            const row = find(bound.params[0]);
+            if (!row) return { meta: { changes: 0 } };
+            row.expiry_reminded_for_ms = row.expires_ms;
+            return { meta: { changes: 1 } };
+          }
           // The reminder's claim and its release, which bind their session id
           // in different positions.
           if (sql.includes("expiry_reminded_for_ms IS NOT ?1")) {
@@ -737,7 +745,16 @@ async function fulfilRenewal(rows) {
 for (const scenario of ["early", "lapsed"]) {
   const now = Date.now();
   const priorExpiry = scenario === "early" ? now + 3 * day : now - 10 * day;
-  const { purchase, provisioned, emails } = await fulfilRenewal(priorPurchase("active", priorExpiry));
+  const rows = priorPurchase("active", priorExpiry);
+  const { purchase, provisioned, emails } = await fulfilRenewal(rows);
+
+  // An early renewal lands while the old expiry is inside the reminder
+  // window; the renewal must retire that pending reminder or the buyer is
+  // told their pass "expires in 3 days" about a date they just moved.
+  const prior = rows.find((row) => row.session_id === "cs_prior");
+  if (prior.expiry_reminded_for_ms !== prior.expires_ms) {
+    throw new Error("A renewal must retire the prior row's pending expiry reminder");
+  }
 
   if (purchase.family_token !== renewalToken) {
     throw new Error("A renewal must keep the family's existing token, or every phone needs setting up again");
