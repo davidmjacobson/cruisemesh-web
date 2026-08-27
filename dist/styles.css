@@ -432,6 +432,9 @@ code {
   .story-price { width: 100%; }
 }
 
+.store-badges { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 14px 0; }
+.store-badges img { display: block; }
+
 @media (prefers-color-scheme: dark) {
   :root {
     --ink: #e8eef2;
