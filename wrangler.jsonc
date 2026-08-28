@@ -53,7 +53,14 @@
     "RELAY_ADMIN_ORIGIN": "https://relay.cruisemesh.app",
     // From-address for credential emails. The domain must be verified in
     // Resend first (see README) or every send is rejected.
-    "EMAIL_FROM": "pass@cruisemesh.app"
+    "EMAIL_FROM": "pass@cruisemesh.app",
+    // Whether the daily expiry reminder emails Stripe test-mode purchases
+    // (session ids beginning cs_test_), which land in this same table whenever
+    // a test checkout is run against the site. "1" turns them on for a
+    // deliberate end-to-end run; anything else — this var being absent
+    // included — skips them. A skipped row is left unclaimed, so flipping this
+    // to "1" still reminds a pass that has not expired yet.
+    "REMIND_TEST_SESSIONS": "0"
   },
   // Secrets (set with `npx wrangler secret put <NAME>`):
   //   STRIPE_SECRET_KEY     - Stripe API secret key

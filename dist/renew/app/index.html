@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Renew Shore Pass</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#fefefd" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f151a" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="shell">
+      <a class="brand" href="/">
+        <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+          <path fill="#fff" stroke="#0e2747" stroke-width="1.2" stroke-linejoin="round" d="M14 45 4 62l23-8Z"/>
+          <circle cx="32" cy="30" r="26" fill="#0e2747"/>
+          <circle cx="32" cy="30" r="23.5" fill="none" stroke="#fff" stroke-width="5"/>
+          <circle cx="32" cy="30" r="25.4" fill="none" stroke="#0e2747" stroke-width="1.2"/>
+          <path fill="none" stroke="#a9dcee" stroke-width="2.4" stroke-linecap="round" d="M32 14 20 22M32 14l12 8M32 14v14.5M20 22l12 6.5M44 22l-12 6.5M24 38l8-9.5M40 38l-8-9.5"/>
+          <circle cx="32" cy="14" r="3.4" fill="#fff"/>
+          <circle cx="20" cy="22" r="3.4" fill="#fff"/>
+          <circle cx="44" cy="22" r="3.4" fill="#fff"/>
+          <circle cx="32" cy="28.5" r="3.6" fill="#d8f1f8"/>
+          <circle cx="24" cy="38" r="3.4" fill="#59cfe4"/>
+          <circle cx="40" cy="38" r="3.4" fill="#59cfe4"/>
+          <path d="M24.5 40.5 32 35.5l7.5 5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M24 43h16l-3 8.5q-5 2.8-10 0Z" fill="#fff"/>
+          <path d="M14 52q10-5.5 19-1t24-3.5" fill="none" stroke="#3fc9de" stroke-width="4" stroke-linecap="round"/>
+          <path d="M28 57q9 3.5 19-1.5" fill="none" stroke="#2fb3cf" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        CruiseMesh
+      </a>
+      <nav><a href="/support/">Support</a></nav>
+    </div>
+  </header>
+  <main class="shell">
+    <div class="intro">
+      <p class="eyebrow">Shore Pass</p>
+      <h1>Renew your pass</h1>
+      <p class="lede" id="intro">Taking you to the payment page.</p>
+      <div class="actions" id="retry-controls" hidden>
+        <button class="button" id="retry" type="button">Try again</button>
+        <a class="button secondary" href="/support/">Get help</a>
+      </div>
+      <div class="notice" id="notice" role="status" aria-live="polite"></div>
+    </div>
+
+    <section>
+      <h2>What renewing does</h2>
+      <p>It extends internet delivery for the phones already on your pass. Nothing needs setting up again, and nothing renews on its own.</p>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div class="shell">Your pass details stay after the <code>#</code> in this URL, so they never appear in a web address or a server log.</div>
+  </footer>
+  <script>
+    (() => {
+      // Deliberately loose. The friend card page once matched only the exact
+      // format the app emitted at the time and told every recipient their link
+      // was empty when the app moved on; the lesson is that the page's job is
+      // to carry the value, not to be the authority on its shape. This is only
+      // enough to tell "the link arrived cut short" from "here is something to
+      // try" — the site decides whether it names a pass.
+      const TOKEN = /^[A-Za-z0-9_-]{16,128}$/;
+
+      const intro = document.querySelector("#intro");
+      const notice = document.querySelector("#notice");
+      const retryControls = document.querySelector("#retry-controls");
+
+      // The fragment, never the query string. The token is the family's live
+      // credential, and everything before the "#" is written into access logs
+      // the whole way along — this site's, Cloudflare's, and whatever proxy a
+      // ship's Wi-Fi runs. Same reason /f and /r read fragments.
+      const token = new URLSearchParams(location.hash.slice(1)).get("f") ?? "";
+      if (!TOKEN.test(token)) {
+        intro.textContent = "This link arrived without your pass details. Some apps cut long links short. Open CruiseMesh, go to Settings, and tap Renew again.";
+        return;
+      }
+
+      async function start() {
+        retryControls.hidden = true;
+        notice.textContent = "";
+        intro.textContent = "Taking you to the payment page.";
+        let response;
+        try {
+          // One fixed same-origin path, and the token travels in the body: a
+          // POST body is not a URL, so it is not logged, not kept in history,
+          // and not handed to the payment page as a referrer.
+          response = await fetch("/api/renew/app", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ family_token: token }),
+          });
+        } catch {
+          // No answer at all: almost always the connection rather than the
+          // pass, so this offers another go instead of the dead-end page.
+          intro.textContent = "Could not reach CruiseMesh.";
+          notice.textContent = "Check your connection and try again.";
+          retryControls.hidden = false;
+          return;
+        }
+        const answer = response.headers.get("content-type") ?? "";
+        if (answer.startsWith("application/json")) {
+          const { url } = await response.json();
+          location.replace(url);
+          return;
+        }
+        // Every way a renewal can fail to start answers with the one page the
+        // site already shows for a dead renewal link — same wording whatever
+        // went wrong, so this can never report back which tokens name a pass.
+        // Showing that answer rather than paraphrasing it keeps a single copy
+        // of the words.
+        const page = await response.text();
+        document.open();
+        document.write(page);
+        document.close();
+      }
+
+      document.querySelector("#retry").addEventListener("click", start);
+      start();
+    })();
+  </script>
+</body>
+</html>

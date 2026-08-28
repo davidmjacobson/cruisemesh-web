@@ -48,6 +48,48 @@ if (!relayPage.includes('from "/qr.mjs"') || !relayPage.includes("setup-qr")) {
 }
 await readFile("dist/qr.mjs");
 
+// The renew-from-app page. Unlike /f and /r it does have to talk to this site
+// — the renewal checkout is started server-side — so the "must not contain
+// fetch(" rule above cannot apply here. What replaces it is narrower and
+// stricter: the family token is a live credential, it arrives in the fragment
+// (which browsers do not send and proxies do not log), and it may leave the
+// page only inside a POST body aimed at one fixed same-origin path. A token
+// pasted into a URL lands in every access log between the phone and here.
+const renewAppPage = await readFile("dist/renew/app/index.html", "utf8");
+if (!renewAppPage.includes("location.hash")) {
+  throw new Error("Renew-from-app page must read the family token from the URL fragment");
+}
+if (renewAppPage.includes("location.search")) {
+  throw new Error("Renew-from-app page must not read the family token from a query string");
+}
+const renewFetchTargets = [...renewAppPage.matchAll(/fetch\(([^,)]*)/g)].map((match) => match[1].trim());
+if (renewFetchTargets.length === 0) {
+  throw new Error("Renew-from-app page must post the family token to start the renewal");
+}
+for (const target of renewFetchTargets) {
+  if (target !== '"/api/renew/app"') {
+    throw new Error(`Renew-from-app page may only fetch the fixed renewal route, not ${target}`);
+  }
+}
+if (!renewAppPage.includes("JSON.stringify({ family_token: token })")) {
+  throw new Error("Renew-from-app page must send the family token in the request body, not the URL");
+}
+// Same lesson as the friend card's CARD pattern: this page carries a value it
+// is not the authority on, so its shape check exists only to tell a truncated
+// link from a usable one. A pattern that rejected a real token would report
+// every pass as unrenewable.
+const renewTokenPattern = renewAppPage.match(/const TOKEN = (\/[^/]+\/)/)?.[1];
+if (!renewTokenPattern) {
+  throw new Error("Renew-from-app page must define a TOKEN pattern for the family-token fragment");
+}
+const renewTokenRe = new RegExp(renewTokenPattern.slice(1, -1));
+if (!renewTokenRe.test("a".repeat(64))) {
+  throw new Error("Renew-from-app page must accept a real 64-character family token");
+}
+if (renewTokenRe.test("")) {
+  throw new Error("Renew-from-app page must not post an empty family token");
+}
+
 // Regression guard. Both "Open in CruiseMesh" buttons pointed at this site's
 // own https URL, and iOS does not fire a Universal Link for a same-domain
 // navigation — so the button was inert in Safari by design, and Chrome
@@ -490,7 +532,36 @@ function purchasesDb(rows) {
           bound.params = params;
           return this;
         },
-        first: async () => find(bound.params[0]) ?? null,
+        first: async () => {
+          // Every other `first` in the Worker looks a purchase up by its
+          // session id, so the default below ignores the SQL entirely. The
+          // renew-from-app route does not: it asks for the newest active row
+          // carrying a family token, and without this branch it would quietly
+          // get null and this file would be testing nothing.
+          if (sql.includes("WHERE family_token = ?1")) {
+            const [familyToken] = bound.params;
+            // The ORDER BY is read out of the SQL rather than assumed: "the
+            // newest active row" is the entire contract of this lookup, and a
+            // stub that sorted by itself would pass a Worker that asked for
+            // the oldest — which would renew from an expiry long since gone.
+            const order = (/ORDER BY ([^\n]*)/.exec(sql)?.[1] ?? "")
+              .split(",")
+              .map((term) => term.trim().split(/\s+/))
+              .map(([column, direction]) => [column, direction === "DESC" ? -1 : 1]);
+            return (
+              rows
+                .filter((row) => row.family_token === familyToken && row.status === "active")
+                .sort((a, b) => {
+                  for (const [column, sign] of order) {
+                    const difference = ((a[column] ?? 0) - (b[column] ?? 0)) * sign;
+                    if (difference !== 0) return difference;
+                  }
+                  return 0;
+                })[0] ?? null
+            );
+          }
+          return find(bound.params[0]) ?? null;
+        },
         all: async () => {
           if (!sql.includes("WHERE status = 'active'")) return { results: rows.slice() };
           const [from, to] = bound.params;
@@ -608,6 +679,82 @@ for (const secret of ["reminder-secret", undefined]) {
   }
 }
 
+// Stripe test-mode purchases share this table with paying ones, because a test
+// checkout run against the site writes an ordinary row. Their buyer address is
+// one of ours, and the renewal they would be offered cannot be paid for with a
+// live key, so they are skipped by default — and skipped without claiming the
+// row, or turning the flag on later would find nothing left to remind.
+for (const [flag, expected] of [[undefined, 0], ["0", 0], ["1", 1]]) {
+  const rows = [
+    {
+      session_id: "cs_test_abc123",
+      status: "active",
+      email: "tester@example.test",
+      expires_ms: Date.now() + 2 * day,
+      provisioned_ms: 1,
+      expiry_reminded_for_ms: null,
+    },
+  ];
+  const sends = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    sends.push(JSON.parse(init.body));
+    return new Response("{}", { status: 200 });
+  };
+  try {
+    await runExpiryReminders({
+      DB: purchasesDb(rows),
+      RESEND_API_KEY: "test-key",
+      EMAIL_FROM: "pass@cruisemesh.app",
+      RENEW_LINK_SECRET: "reminder-secret",
+      REMIND_TEST_SESSIONS: flag,
+    });
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  if (sends.length !== expected) {
+    throw new Error(
+      `A test-mode purchase must get ${expected} reminder with REMIND_TEST_SESSIONS=${flag}; got ${sends.length}`,
+    );
+  }
+  if (expected === 0 && rows[0].expiry_reminded_for_ms !== null) {
+    throw new Error("A skipped test-mode reminder must leave the row unclaimed for a later run");
+  }
+}
+// A live purchase must not be caught by the test-mode skip — the prefix is
+// "cs_test_", and live session ids begin "cs_live_" or plain "cs_".
+{
+  const rows = [
+    {
+      session_id: "cs_live_abc123",
+      status: "active",
+      email: "buyer@example.test",
+      expires_ms: Date.now() + 2 * day,
+      provisioned_ms: 1,
+      expiry_reminded_for_ms: null,
+    },
+  ];
+  const sends = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    sends.push(JSON.parse(init.body));
+    return new Response("{}", { status: 200 });
+  };
+  try {
+    await runExpiryReminders({
+      DB: purchasesDb(rows),
+      RESEND_API_KEY: "test-key",
+      EMAIL_FROM: "pass@cruisemesh.app",
+      RENEW_LINK_SECRET: "reminder-secret",
+    });
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  if (sends.length !== 1) {
+    throw new Error(`Gating test-mode reminders must not silence live ones; sent ${sends.length}`);
+  }
+}
+
 // Following a renewal link must never reveal whether a purchase exists. The
 // signature stops strangers minting links at all; this is the second line — a
 // valid link naming a purchase that is not there answers exactly like a link
@@ -664,6 +811,130 @@ for (const secret of ["reminder-secret", undefined]) {
   }
   if (!stripeCalls[0].body.includes("price_test")) {
     throw new Error("A renewal must check out at the same one-time price as a first purchase");
+  }
+}
+
+// The in-app Renew button (POST /api/renew/app). Here the family token is the
+// capability rather than a signature, so anyone can post a guess — which makes
+// the no-oracle rule load-bearing in a way it is not on the emailed link. An
+// unknown token, a token whose pass is no longer active, and a request with no
+// token at all must be one answer, byte for byte, and the same answer a dead
+// emailed link gets. The happy path has to attach the checkout to the pass the
+// family is on *now*, not the one it renewed last time.
+{
+  const familyToken = "a".repeat(64);
+  const lapsedFamilyToken = "b".repeat(64);
+  const now = Date.now();
+  const rows = [
+    // The pass this family bought first, then the renewal it is on now. Both
+    // are active and both carry the same token: that is what a renewal is.
+    {
+      session_id: "cs_last_year",
+      status: "active",
+      email: "onfile@example.test",
+      family_token: familyToken,
+      expires_ms: now - 300 * day,
+      created_ms: now - 330 * day,
+    },
+    {
+      session_id: "cs_current",
+      status: "active",
+      email: "onfile@example.test",
+      family_token: familyToken,
+      expires_ms: now + 3 * day,
+      created_ms: now - 27 * day,
+    },
+    // Someone else's pass, refunded. Nothing about it may be renewable, and
+    // nothing about the answer may say it is there.
+    {
+      session_id: "cs_refunded",
+      status: "refunded",
+      email: "elsewhere@example.test",
+      family_token: lapsedFamilyToken,
+      expires_ms: now + 3 * day,
+      created_ms: now - 27 * day,
+    },
+  ];
+  const env = {
+    DB: purchasesDb(rows),
+    ASSETS: stubAssets,
+    STRIPE_PRICE_ID: "price_test",
+    STRIPE_SECRET_KEY: "sk_test",
+  };
+  const stripeCalls = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    stripeCalls.push({ url: String(url), body: init?.body ?? "" });
+    return new Response(JSON.stringify({ id: "cs_new", url: "https://checkout.stripe.test/session" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+  let started;
+  let unknown;
+  let inactive;
+  let tokenless;
+  let deadLink;
+  try {
+    const post = (body) =>
+      worker.fetch(
+        new Request("https://cruisemesh.app/api/renew/app", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body,
+        }),
+        env,
+      );
+    started = await post(JSON.stringify({ family_token: familyToken }));
+    unknown = await post(JSON.stringify({ family_token: "c".repeat(64) }));
+    inactive = await post(JSON.stringify({ family_token: lapsedFamilyToken }));
+    tokenless = await post("{}");
+    // With no signing secret configured nothing verifies, so this is the
+    // emailed link's failure page — the one every renewal failure must match.
+    deadLink = await worker.fetch(new Request("https://cruisemesh.app/renew?t=not-a-real-token"), env);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+
+  const { url: checkoutUrl } = await started.json();
+  if (started.status !== 200 || checkoutUrl !== "https://checkout.stripe.test/session") {
+    throw new Error("A renewal started from the app must answer with the checkout URL");
+  }
+  if (stripeCalls.length !== 1) {
+    throw new Error(`Only a token naming a live pass may open a checkout; opened ${stripeCalls.length}`);
+  }
+  // The pass the family is on now, not the one it renewed a year ago —
+  // fulfillment extends from the prior row's expiry, so naming the older row
+  // would hand them a pass that is already in the past.
+  if (!stripeCalls[0].body.includes("metadata%5Brenewal_of%5D=cs_current")) {
+    throw new Error("A renewal from the app must name the family's newest active purchase");
+  }
+  if (!stripeCalls[0].body.includes("price_test")) {
+    throw new Error("A renewal from the app must check out at the same one-time price");
+  }
+
+  const failures = { unknown, inactive, tokenless, deadLink };
+  const bodies = {};
+  for (const [name, response] of Object.entries(failures)) {
+    bodies[name] = await response.text();
+  }
+  for (const name of ["unknown", "inactive", "tokenless"]) {
+    if (failures[name].status !== deadLink.status) {
+      throw new Error(`A ${name} renewal token must not be distinguishable by status code`);
+    }
+    if (bodies[name] !== bodies.deadLink) {
+      throw new Error(`A ${name} renewal token must answer with the same page a dead renewal link does`);
+    }
+  }
+  if (!bodies.deadLink.includes("This renewal link no longer works")) {
+    throw new Error("A refused renewal from the app must get the friendly page, not an error");
+  }
+  // Nothing on this path may hand back who bought the pass: the app knows the
+  // token, not the buyer, and the confirmation goes to the address on file.
+  for (const body of Object.values(bodies)) {
+    for (const address of ["onfile@example.test", "elsewhere@example.test"]) {
+      if (body.includes(address)) throw new Error("A renewal from the app must never reveal the buyer's email");
+    }
   }
 }
 

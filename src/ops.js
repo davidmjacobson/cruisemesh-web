@@ -264,9 +264,23 @@ export async function runExpiryReminders(env) {
     .all();
 
   let sent = 0;
+  let skipped = 0;
   const failures = [];
   for (const purchase of due) {
     try {
+      // Stripe test-mode sessions (cs_test_…) sit in the same table as real
+      // ones — a test checkout run against this site writes an ordinary
+      // purchase row — and their buyer address is one of ours. Reminding them
+      // spends a real send on nobody and offers a renewal that cannot be paid
+      // for with a live key, so they are skipped unless the flag is turned on
+      // for a deliberate end-to-end run. Skipping here rather than in the
+      // SELECT keeps the query free of a LIKE and keeps the rule readable next
+      // to the claim it precedes. The row is left unclaimed, so turning the
+      // flag on later still reminds it.
+      if (purchase.session_id.startsWith("cs_test_") && env.REMIND_TEST_SESSIONS !== "1") {
+        skipped += 1;
+        continue;
+      }
       // Claiming on `expires_ms = ?1` as well means a row whose expiry moved
       // since the SELECT is left for the next run rather than reminded about
       // a date that is no longer true.
@@ -302,7 +316,9 @@ export async function runExpiryReminders(env) {
     }
   }
 
-  console.log(`expiry reminders: ${due.length} due, ${sent} sent, ${failures.length} failed`);
+  console.log(
+    `expiry reminders: ${due.length} due, ${sent} sent, ${skipped} test-mode skipped, ${failures.length} failed`,
+  );
   if (failures.length > 0) {
     // Buyer-facing mail that silently stops going out looks exactly like a
     // quiet week, so a failed batch pages the operator.

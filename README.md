@@ -104,6 +104,27 @@ the `/api/` endpoints simply return errors.
    `wrangler.redirect.jsonc` gets its DNS record and certificate from that
    deploy and needs no dashboard step.
 
+### Renewing a pass
+
+Two ways in, one checkout. The expiry-reminder email carries a signed link to
+`/renew?t=…` (`src/renew.js`); the app's own Renew button opens
+`/renew/app#f=<family token>`, whose page reads the token out of the fragment
+and posts it to `POST /api/renew/app`. Both end at the same Stripe checkout
+tagged `metadata[renewal_of]`, so fulfillment, the shared-token guarantee and
+the reminder suppression are one code path.
+
+The token rides the fragment for the same reason the friend and setup cards
+do: everything before the `#` is written into access logs the whole way along,
+and a family token is a live credential. It is never put in a query string,
+and the failure page is the same bytes whatever went wrong, so the route
+cannot be asked whether a token names a pass.
+
+`vars.REMIND_TEST_SESSIONS` gates the daily reminder for Stripe test-mode
+purchases (`cs_test_…`), which land in this same table whenever a test
+checkout is run against the site. It defaults to `"0"` — skip. Set it to `"1"`
+only for a deliberate end-to-end run; a skipped row is left unclaimed, so
+flipping it later still reminds a pass that has not expired yet.
+
 ## Association identifiers
 
 - Android package: `com.cruisemesh.app`
