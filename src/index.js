@@ -219,6 +219,50 @@ async function handleRenew(request, env) {
   });
 }
 
+// POST /api/renew/app — the in-app Renew button's half of the flow. The app
+// opens /renew/app#f=<family token>; that page reads the token out of the
+// fragment and posts it here. The family token IS the capability: every phone
+// on the pass already holds it, and holding it is the only thing that says
+// "this family". So there is no signature to check here and nothing else to
+// ask for, and the checkout that comes back carries the same
+// metadata[renewal_of] the emailed link sets — fulfillment cannot tell the two
+// paths apart.
+//
+// Anyone can post a guess at this route, so the no-oracle rule does more work
+// here than on the signed link: an unknown token, a token whose pass is no
+// longer active, and a request with no token at all all answer with
+// renewLinkUnusablePage() — the same bytes and status a dead emailed link
+// gets. The buyer's email is never read, returned, or needed; paying only ever
+// mails the address already on file.
+async function handleRenewFromApp(request, env) {
+  const body = await request.json().catch(() => null);
+  const familyToken = body?.family_token;
+  if (typeof familyToken !== "string" || !familyToken) return renewLinkUnusablePage();
+  // A family renews the pass it is on now: the newest active purchase carrying
+  // this token. The older rows are the passes it already renewed, and tagging
+  // the checkout with one of those would have fulfillment extend from an
+  // expiry that has long since been superseded — hence an explicit order
+  // rather than whatever the table hands back first. family_token has no
+  // index, but this table holds one row per purchase ever made, so the scan is
+  // small; determinism is the property that matters.
+  const prior = await env.DB.prepare(
+    `SELECT session_id FROM purchases
+      WHERE family_token = ?1 AND status = 'active'
+      ORDER BY expires_ms DESC, created_ms DESC
+      LIMIT 1`,
+  )
+    .bind(familyToken)
+    .first();
+  if (!prior) return renewLinkUnusablePage();
+  const session = await createRenewalCheckoutSession(env, new URL(request.url).origin, prior.session_id);
+  // `no-store` for the same reason the emailed link's 303 carries it: the
+  // answer is a one-shot checkout URL belonging to one family, and nothing
+  // between the phone and here should keep a copy of it.
+  const started = json({ url: session.url });
+  started.headers.set("cache-control", "no-store");
+  return started;
+}
+
 // Where a paid renewal lands. Deliberately not the ordinary success page: it
 // confirms the new date and nothing else, so no credential is drawn in a
 // browser that did not need it.
@@ -397,6 +441,7 @@ export default {
       if (url.pathname === "/api/stripe/webhook" && request.method === "POST") return await handleStripeWebhook(request, env);
       if (url.pathname === "/relay/success" && request.method === "GET") return await handleSuccess(request, env);
       if (url.pathname === "/renew" && request.method === "GET") return await handleRenew(request, env);
+      if (url.pathname === "/api/renew/app" && request.method === "POST") return await handleRenewFromApp(request, env);
       if (url.pathname === "/relay/renewed" && request.method === "GET") return await handleRenewed(request, env);
     } catch (error) {
       console.error(`${request.method} ${url.pathname} failed: ${error}`);

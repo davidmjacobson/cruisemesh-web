@@ -21,6 +21,11 @@
 /r/*
   Cache-Control: public, max-age=300
 
+# The renew-from-app page. Static and identical for every family — the token
+# it acts on arrives in the fragment, which a cache never sees.
+/renew/*
+  Cache-Control: public, max-age=300
+
 /*
   Strict-Transport-Security: max-age=31536000
   Referrer-Policy: no-referrer
