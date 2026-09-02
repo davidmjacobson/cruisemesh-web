@@ -131,6 +131,34 @@ for (const requiredText of [
     throw new Error(`Terms page must include ${requiredText}`);
   }
 }
+// Launch links. The whole point of the store listings is that someone handed
+// a friend card or a pass link can get the app, and every one of these pages
+// is a place a stranger lands before installing anything. They went public
+// with "isn't in the app stores yet" copy on them; a page that loses its
+// install path again is a dead end, not a cosmetic regression.
+const APP_STORE_LINK = "https://apps.apple.com/app/id6789561040";
+const PLAY_LINK = "https://play.google.com/store/apps/details?id=com.cruisemesh.app";
+for (const page of ["", "families/", "pass/", "f/", "r/"]) {
+  const html = await readFile(`dist/${page}index.html`, "utf8");
+  for (const [name, link] of [["App Store", APP_STORE_LINK], ["Google Play", PLAY_LINK]]) {
+    if (!html.includes(link)) {
+      throw new Error(`/${page} must link to the ${name} listing`);
+    }
+  }
+  if (!html.includes('name="apple-itunes-app"')) {
+    throw new Error(`/${page} must carry the apple-itunes-app banner meta`);
+  }
+}
+// The prelaunch copy is gone; make sure it cannot come back by a stale edit.
+for (const page of ["", "families/", "pass/"]) {
+  const html = await readFile(`dist/${page}index.html`, "utf8");
+  for (const stale of ["aren't in the app stores yet", "isn't in the app stores yet", "store listings aren't public"]) {
+    if (html.includes(stale)) {
+      throw new Error(`/${page} still carries prelaunch copy: "${stale}"`);
+    }
+  }
+}
+
 if (relayPage.includes("fetch(")) {
   throw new Error("Relay setup page must not transmit relay-card fragments");
 }
