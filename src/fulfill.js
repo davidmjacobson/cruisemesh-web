@@ -86,6 +86,19 @@ export async function fulfillCheckoutSession(env, sessionId) {
     // wrong with D1, not that the customer did not pay. Throw so the webhook
     // 500s and Stripe retries, instead of a TypeError on the next line.
     if (!purchase) throw new Error(`purchase row missing after insert for ${sessionId}`);
+    if (prior) {
+      // The prior row keeps its old expires_ms, and the reminder job selects
+      // on that date alone — so a buyer who renews BEFORE the T-3 reminder
+      // fires would still be told their pass "expires in 3 days" about a date
+      // their renewal already moved. Marking the old date as reminded-for
+      // retires that send; the new row earns its own reminder near the new
+      // date. Idempotent, so the webhook/success-page race can run it twice.
+      await env.DB.prepare(
+        "UPDATE purchases SET expiry_reminded_for_ms = expires_ms WHERE session_id = ?1",
+      )
+        .bind(prior.session_id)
+        .run();
+    }
   }
 
   if (!purchase.provisioned_ms) {
