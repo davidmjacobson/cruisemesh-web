@@ -364,7 +364,7 @@ async function handleSuccess(request, env) {
      <div class="setup-qr">
        <h2>Set up another phone</h2>
        ${setupQr}
-       <p>Scan with the other family phone. This configures internet delivery; it does not add a contact.</p>
+       <p>Scan with each other family phone, including the phones staying home &mdash; your pass covers them too, and it is easiest before you sail. This configures internet delivery; it does not add a contact.</p>
      </div>
      <div class="actions secondary-actions">
        <button class="button secondary" id="copy-setup-card" type="button">Copy setup card</button>
