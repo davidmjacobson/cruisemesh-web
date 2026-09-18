@@ -452,6 +452,19 @@ if (!emailSource.includes("each family phone needs this setup")) {
 if (emailSource.includes("shared automatically through the friend cards")) {
   throw new Error("Credential email must not imply that friend cards configure Shore Pass");
 }
+// The failure mode these three guards exist for: a pass is bought, the phone
+// that stays home is never set up, and the gap is discovered mid-ocean when it
+// can no longer be fixed. The app and /pass already say it; the surfaces a
+// buyer sees *after paying* must say it too.
+if (!emailSource.includes("phones staying home")) {
+  throw new Error("Credential email must say the pass covers the phones staying home, and to set them up before sailing");
+}
+if (!(await readFile("src/index.js", "utf8")).includes("phones staying home")) {
+  throw new Error("Purchase success page must say the setup QR is for the phones staying home too");
+}
+if (!(await readFile("dist/support/index.html", "utf8")).includes("Family at home isn't getting messages")) {
+  throw new Error("Support page must carry the 'family at home isn't getting messages' entry");
+}
 
 // The expiring-pass reminder. Renewing is now possible, but only as a payment
 // the buyer chooses: nothing bills them on its own, and a buyer who believed
